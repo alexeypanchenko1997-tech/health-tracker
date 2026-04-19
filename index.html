@@ -1904,12 +1904,10 @@ setupWaterHourlyReminders();
     else ctx.rect(0,0,180,180);
     ctx.fill();
     ctx.fillStyle='#4a9eff';
-    ctx.font='bold 36px -apple-system,system-ui,sans-serif';
+    ctx.font='bold 110px -apple-system,system-ui,sans-serif';
     ctx.textAlign='center';
-    ctx.fillText('Health',90,88);
-    ctx.fillStyle='#9a9da3';
-    ctx.font='500 26px -apple-system,system-ui,sans-serif';
-    ctx.fillText('Tracker',90,124);
+    ctx.textBaseline='middle';
+    ctx.fillText('H',90,95);
     const link=document.getElementById('apple-icon');
     if(link) link.href=c.toDataURL('image/png');
   }catch(e){}
