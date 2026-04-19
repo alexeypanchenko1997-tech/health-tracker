@@ -289,17 +289,6 @@ label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px}
     <div class="quick-row" id="today-quick-btns"></div>
   </div>
 
-  <!-- TDEE + note -->
-  <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>Норма КБЖУ</span>
-      <button class="btn" style="padding:3px 10px;font-size:11px" onclick="openTdeeModal()">Изменить</button>
-    </div>
-    <div id="tdee-summary-today">
-      <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">Нажми «Изменить» чтобы рассчитать норму</div>
-    </div>
-  </div>
-
   <div class="card">
     <div class="card-title">Заметка к дню</div>
     <textarea id="day-note" class="note-area" rows="3" placeholder="Читмил, тренировка, болел..." oninput="saveNote()"></textarea>
@@ -537,6 +526,50 @@ label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px}
       <label class="toggle"><input type="checkbox" id="water-notif-toggle" onchange="toggleWaterHourlyNotif()"><span class="toggle-sl"></span></label>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px" id="water-notif-status"></div>
+  </div>
+
+  <!-- TDEE CARD in Ещё -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Норма КБЖУ</span>
+      <button class="btn btn-p" style="padding:4px 12px;font-size:12px" onclick="openTdeeModal()">Рассчитать</button>
+    </div>
+    <div id="tdee-summary-today">
+      <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">Нажми «Рассчитать» чтобы задать норму КБЖУ</div>
+    </div>
+  </div>
+
+  <!-- WEIGHT TRACKER -->
+  <div class="card">
+    <div class="card-title">Трекер веса</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px">
+      <div><label>Вес, кг</label><input type="number" id="wt-input" placeholder="75.5" min="20" max="300" step="0.1"></div>
+      <div><label>Дата</label><input type="date" id="wt-date"></div>
+      <button class="btn btn-g" onclick="addWeightEntry()" style="padding:7px 14px">+</button>
+    </div>
+    <div class="g4" style="margin-bottom:10px">
+      <div class="kpi ck"><div class="kpi-lbl">Текущий</div><div class="kpi-val" id="wt-cur">—</div><div class="kpi-sub">кг</div></div>
+      <div class="kpi"><div class="kpi-lbl">Старт</div><div class="kpi-val" id="wt-start" style="color:var(--text2)">—</div><div class="kpi-sub">кг</div></div>
+      <div class="kpi"><div class="kpi-lbl">Изменение</div><div class="kpi-val" id="wt-delta">—</div><div class="kpi-sub">кг</div></div>
+      <div class="kpi"><div class="kpi-lbl">Записей</div><div class="kpi-val" id="wt-count" style="color:var(--text2)">0</div></div>
+    </div>
+    <div id="wt-chart-wrap" style="display:none">
+      <div class="tab-row" id="wt-period-tabs">
+        <button class="tab active" onclick="setWeightPeriod(30,this)">30 дней</button>
+        <button class="tab" onclick="setWeightPeriod(90,this)">3 мес</button>
+        <button class="tab" onclick="setWeightPeriod(365,this)">Год</button>
+        <button class="tab" onclick="setWeightPeriod(0,this)">Всё</button>
+      </div>
+      <div style="position:relative;height:140px;margin-bottom:4px">
+        <svg id="wt-chart-svg" width="100%" height="140" style="overflow:visible;display:block"></svg>
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:right" id="wt-chart-hint"></div>
+    </div>
+    <div id="wt-log-wrap" style="display:none;margin-top:8px">
+      <div class="section-lbl">История</div>
+      <div id="wt-log" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:3px"></div>
+    </div>
+    <div class="empty" id="wt-empty">Ещё нет записей. Добавь первый замер.</div>
   </div>
 
   <!-- DATA -->
@@ -1059,7 +1092,8 @@ function openFoodModal(mealType, entryToEdit){
   addingMealType = mealType;
   document.getElementById('modal-food-title').textContent = editingEntryId ? 'Редактировать' : 'Добавить';
   document.getElementById('modal-food-btn').textContent = editingEntryId ? 'Сохранить' : 'Добавить';
-  document.getElementById('modal-food-save-btn').style.display = editingEntryId ? 'none' : '';
+  document.getElementById('modal-food-save-btn').textContent = editingEntryId ? '📚 Сохранить в библиотеку' : '+ Сохранить в базу';
+  document.getElementById('modal-food-save-btn').style.display = '';
   if(entryToEdit){
     document.getElementById('add-meal-type').value=entryToEdit.meal;
     document.getElementById('add-name').value=entryToEdit.name;
@@ -1123,6 +1157,14 @@ function submitFoodEntry(saveToBase){
     const idx=arr.findIndex(e=>e.id===editingEntryId);
     if(idx>-1) arr[idx]={...arr[idx],...data};
     editingEntryId=null;
+    if(saveToBase){
+      const existing=savedFoods.findIndex(f=>f.name.toLowerCase()===data.name.toLowerCase());
+      const entry={id:Date.now().toString(36),name:data.name,k:data.k,b:data.b,z:data.z,u:data.u};
+      if(existing>-1) savedFoods[existing]={...savedFoods[existing],...entry};
+      else savedFoods.push(entry);
+      saveFoods();
+      showToast('Сохранено в библиотеку ✓');
+    }
   } else {
     // Add new
     const k100=parseFloat(document.getElementById('add-k100').value)||null;
@@ -1206,12 +1248,12 @@ function fillFromSaved(food){
   document.getElementById('add-weight').value=100;
   calcFromWeight();
   document.getElementById('add-weight').select();
-  // Hide "save to base" — already in base
-  document.getElementById('modal-food-save-btn').style.display='none';
+  // Hide "save to base" — already in base (unless editing)
+  if(!editingEntryId) document.getElementById('modal-food-save-btn').style.display='none';
 }
 
 function onFoodNameInput(){
-  // If user edits the name manually — show save button again
+  if(editingEntryId) return; // in edit mode — always show
   const name = document.getElementById('add-name').value.trim();
   const inBase = savedFoods.find(f=>f.name.toLowerCase()===name.toLowerCase());
   document.getElementById('modal-food-save-btn').style.display = inBase ? 'none' : '';
@@ -1480,6 +1522,11 @@ function renderMore(){
   document.getElementById('goal-z').value=goals.z;
   document.getElementById('goal-u').value=goals.u;
   renderSFSettings();
+  // TDEE summary
+  if(tdeeData.result) renderTdeeSummaryToday(tdeeData.result);
+  // Weight tracker
+  initWeightDateInput();
+  renderWeightTracker();
 }
 
 
@@ -1597,7 +1644,8 @@ function exportAll(){
     version:2,
     exportedAt:new Date().toISOString(),
     foodEntries,goals,savedFoods,dayNotes,
-    waterEntries,waterNorm
+    waterEntries,waterNorm,
+    weightEntries
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -1624,6 +1672,13 @@ function handleImport(event){
         waterEntries=[...waterEntries,...we.filter(e=>!existing.has(e.id))];
       }
       if(d.waterNorm||d.norm) waterNorm=d.waterNorm||d.norm;
+      // Weight
+      if(d.weightEntries&&Array.isArray(d.weightEntries)){
+        const existDates=new Set(weightEntries.map(e=>e.date));
+        weightEntries=[...weightEntries,...d.weightEntries.filter(e=>!existDates.has(e.date))];
+        weightEntries.sort((a,b)=>a.date.localeCompare(b.date));
+        saveWeightEntries();
+      }
       saveFoodEntries();saveGoalsSt();saveFoods();saveNotes();saveWaterEntries();saveWaterNormSt();
       renderToday();showToast('Импортировано ✓');
     }catch(e){ showToast('Ошибка формата файла'); }
@@ -2039,11 +2094,176 @@ function renderTdeeSummaryToday(r){
 }
 
 // ══════════════════════════════════════════════════════
+// WEIGHT TRACKER
+// ══════════════════════════════════════════════════════
+let weightEntries = []; // [{id, date:'YYYY-MM-DD', kg}]
+let weightPeriod = 30;
+
+function loadWeightEntries(){
+  try{ weightEntries=JSON.parse(localStorage.getItem('weight_entries_v1'))||[]; }catch(e){}
+}
+function saveWeightEntries(){ localStorage.setItem('weight_entries_v1',JSON.stringify(weightEntries)); }
+
+function addWeightEntry(){
+  const kg=parseFloat(document.getElementById('wt-input').value);
+  const date=document.getElementById('wt-date').value;
+  if(!kg||kg<20||kg>300){ showToast('Введи корректный вес'); return; }
+  if(!date){ showToast('Выбери дату'); return; }
+  // Remove existing for same date
+  const idx=weightEntries.findIndex(e=>e.date===date);
+  if(idx>-1) weightEntries.splice(idx,1);
+  weightEntries.push({id:Date.now().toString(36),date,kg});
+  weightEntries.sort((a,b)=>a.date.localeCompare(b.date));
+  saveWeightEntries();
+  haptic();
+  document.getElementById('wt-input').value='';
+  renderWeightTracker();
+  showToast('Вес добавлен ✓');
+}
+
+function deleteWeightEntry(id){
+  const i=weightEntries.findIndex(e=>e.id===id);
+  if(i>-1) weightEntries.splice(i,1);
+  saveWeightEntries();
+  renderWeightTracker();
+}
+
+function setWeightPeriod(days, btn){
+  weightPeriod=days;
+  document.querySelectorAll('#wt-period-tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderWeightChart();
+}
+
+function renderWeightTracker(){
+  const empty=document.getElementById('wt-empty');
+  const chartWrap=document.getElementById('wt-chart-wrap');
+  const logWrap=document.getElementById('wt-log-wrap');
+
+  if(!weightEntries.length){
+    empty.style.display='';
+    chartWrap.style.display='none';
+    logWrap.style.display='none';
+    ['wt-cur','wt-start','wt-delta'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('wt-count').textContent='0';
+    return;
+  }
+  empty.style.display='none';
+  chartWrap.style.display='';
+  logWrap.style.display='';
+
+  const last=weightEntries[weightEntries.length-1];
+  const first=weightEntries[0];
+  const delta=(last.kg-first.kg);
+  const deltaStr=(delta>0?'+':'')+delta.toFixed(1);
+
+  document.getElementById('wt-cur').textContent=last.kg.toFixed(1);
+  document.getElementById('wt-start').textContent=first.kg.toFixed(1);
+  const deltaEl=document.getElementById('wt-delta');
+  deltaEl.textContent=deltaStr;
+  deltaEl.style.color=delta<0?'var(--green)':delta>0?'var(--amber)':'var(--text3)';
+  document.getElementById('wt-count').textContent=weightEntries.length;
+
+  renderWeightChart();
+  renderWeightLog();
+}
+
+function renderWeightChart(){
+  const svg=document.getElementById('wt-chart-svg');
+  if(!svg) return;
+  const hint=document.getElementById('wt-chart-hint');
+
+  let data=[...weightEntries];
+  if(weightPeriod>0){
+    const cutoff=new Date();
+    cutoff.setDate(cutoff.getDate()-weightPeriod);
+    const cutStr=isoDate(cutoff);
+    data=data.filter(e=>e.date>=cutStr);
+  }
+  if(data.length<2){ svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--text3)" font-size="12">Добавь минимум 2 записи для графика</text>'; return; }
+
+  const W=svg.parentElement.clientWidth||320;
+  const H=140;
+  const pad={t:16,r:12,b:24,l:36};
+  const w=W-pad.l-pad.r;
+  const h=H-pad.t-pad.b;
+
+  const kgs=data.map(e=>e.kg);
+  const minK=Math.min(...kgs);
+  const maxK=Math.max(...kgs);
+  const range=maxK-minK||1;
+
+  const xScale=i=>(i/(data.length-1))*w+pad.l;
+  const yScale=k=>pad.t+(1-(k-minK)/range)*h;
+
+  // Grid lines
+  let svgHTML='';
+  const ticks=4;
+  for(let i=0;i<=ticks;i++){
+    const y=pad.t+(i/ticks)*h;
+    const val=(maxK-(i/ticks)*range).toFixed(1);
+    svgHTML+=`<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
+    svgHTML+=`<text x="${pad.l-4}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text3)">${val}</text>`;
+  }
+
+  // Area fill
+  let areaPath=`M${xScale(0)},${yScale(data[0].kg)}`;
+  data.forEach((e,i)=>{ if(i>0) areaPath+=` L${xScale(i)},${yScale(e.kg)}`; });
+  areaPath+=` L${xScale(data.length-1)},${H-pad.b} L${xScale(0)},${H-pad.b} Z`;
+  svgHTML+=`<path d="${areaPath}" fill="var(--blue)" fill-opacity="0.1"/>`;
+
+  // Line
+  let linePath=`M${xScale(0)},${yScale(data[0].kg)}`;
+  data.forEach((e,i)=>{ if(i>0) linePath+=` L${xScale(i)},${yScale(e.kg)}`; });
+  svgHTML+=`<path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round"/>`;
+
+  // Dots + X labels (show first, last, and every ~7th)
+  data.forEach((e,i)=>{
+    const x=xScale(i), y=yScale(e.kg);
+    const showDot=i===0||i===data.length-1||data.length<=14||i%Math.ceil(data.length/10)===0;
+    if(showDot){
+      svgHTML+=`<circle cx="${x}" cy="${y}" r="3" fill="var(--blue)" stroke="var(--bg2)" stroke-width="1.5"/>`;
+      const lbl=e.date.slice(5); // MM-DD
+      svgHTML+=`<text x="${x}" y="${H-pad.b+14}" text-anchor="middle" font-size="9" fill="var(--text3)">${lbl}</text>`;
+    }
+  });
+
+  svg.setAttribute('width',W);
+  svg.innerHTML=svgHTML;
+  if(hint) hint.textContent=`${data.length} записей`;
+}
+
+function renderWeightLog(){
+  const el=document.getElementById('wt-log');
+  if(!el) return;
+  const reversed=[...weightEntries].reverse();
+  el.innerHTML=reversed.map((e,i)=>{
+    const prev=reversed[i+1];
+    let diff='';
+    if(prev){
+      const d=(e.kg-prev.kg);
+      diff=`<span style="font-size:11px;color:${d<0?'var(--green)':d>0?'var(--amber)':'var(--text3)'};margin-left:4px">${d>0?'+':''}${d.toFixed(1)}</span>`;
+    }
+    return`<div style="display:flex;align-items:center;background:var(--bg3);border-radius:8px;padding:6px 10px;gap:6px">
+      <span style="flex:1;font-size:13px;color:var(--text2)">${e.date}</span>
+      <span style="font-size:14px;font-weight:500;color:var(--text)">${e.kg.toFixed(1)} кг${diff}</span>
+      <button onclick="deleteWeightEntry('${e.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px" title="Удалить">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function initWeightDateInput(){
+  const el=document.getElementById('wt-date');
+  if(el&&!el.value) el.value=isoToday();
+}
+
+// ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
 loadAll();
 loadReminderSettings();
 loadTdeeData();
+loadWeightEntries();
 updateDateLabels();
 renderToday();
 restoreNotif();
