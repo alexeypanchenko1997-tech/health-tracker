@@ -289,29 +289,20 @@ label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px}
     <div class="quick-row" id="today-quick-btns"></div>
   </div>
 
-  <!-- Streak + note -->
-  <div class="g2">
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title">Streak</div>
-      <div class="streak-box">
-        <div>
-          <div class="streak-num" id="streak-food" style="color:var(--amber)">0</div>
-          <div class="streak-sub">🍽️ питание</div>
-        </div>
-      </div>
-      <div style="margin-top:6px">
-      <div class="streak-box">
-        <div>
-          <div class="streak-num" id="streak-water" style="color:var(--cyan)">0</div>
-          <div class="streak-sub">💧 вода</div>
-        </div>
-      </div>
-      </div>
+  <!-- TDEE + note -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Норма КБЖУ</span>
+      <button class="btn" style="padding:3px 10px;font-size:11px" onclick="openTdeeModal()">Изменить</button>
     </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title">Заметка к дню</div>
-      <textarea id="day-note" class="note-area" rows="5" placeholder="Читмил, тренировка, болел..." oninput="saveNote()"></textarea>
+    <div id="tdee-summary-today">
+      <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">Нажми «Изменить» чтобы рассчитать норму</div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Заметка к дню</div>
+    <textarea id="day-note" class="note-area" rows="3" placeholder="Читмил, тренировка, болел..." oninput="saveNote()"></textarea>
   </div>
 </div>
 
@@ -571,6 +562,67 @@ label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px}
   <button class="bnav-btn" onclick="showView('more',this)"><span class="bnav-icon">📊</span>Ещё</button>
 </nav>
 </div><!-- /app-wrap -->
+
+<!-- ════ MODAL: TDEE CALCULATOR ════ -->
+<div class="overlay" id="modal-tdee">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-title">Калькулятор нормы КБЖУ</span><button class="modal-close" onclick="closeModal('modal-tdee')">✕</button></div>
+
+    <div class="fg2">
+      <div><label>Вес, кг</label><input type="number" id="tdee-weight" placeholder="80" min="30" max="250"></div>
+      <div><label>Рост, см</label><input type="number" id="tdee-height" placeholder="180" min="100" max="250"></div>
+    </div>
+    <div class="fg2">
+      <div><label>Возраст</label><input type="number" id="tdee-age" placeholder="29" min="14" max="100"></div>
+      <div><label>% жира (необяз.)</label><input type="number" id="tdee-bf" placeholder="15" min="3" max="60"></div>
+    </div>
+    <div class="fg">
+      <label>Активность</label>
+      <select id="tdee-activity">
+        <option value="1.2">Сидячий образ жизни (офис, без спорта)</option>
+        <option value="1.375">Лёгкая активность (1–3 тренировки в неделю)</option>
+        <option value="1.55" selected>Средняя активность (3–5 тренировок)</option>
+        <option value="1.725">Высокая активность (6–7 тренировок)</option>
+        <option value="1.9">Очень высокая (физический труд + спорт)</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Цель</label>
+      <select id="tdee-goal">
+        <option value="-0.20">Похудение — дефицит 20%</option>
+        <option value="-0.15">Мягкое похудение — дефицит 15%</option>
+        <option value="-0.10">Сушка — дефицит 10%</option>
+        <option value="0" selected>Поддержание веса</option>
+        <option value="0.10">Набор — профицит 10%</option>
+        <option value="0.15">Активный набор — профицит 15%</option>
+        <option value="0.20">Быстрый набор — профицит 20%</option>
+      </select>
+    </div>
+
+    <div id="tdee-result" style="display:none;background:var(--bg3);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em" id="tdee-formula-label"></div>
+      <div class="g4" style="margin-bottom:10px">
+        <div><div style="font-size:10px;color:var(--text3)">BMR</div><div style="font-size:16px;font-weight:500;color:var(--text)" id="res-bmr">—</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">TDEE</div><div style="font-size:16px;font-weight:500;color:var(--text)" id="res-tdee">—</div></div>
+        <div><div style="font-size:10px;color:var(--blue)">Цель ккал</div><div style="font-size:16px;font-weight:500;color:var(--blue)" id="res-target">—</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Дефицит</div><div style="font-size:14px;font-weight:500" id="res-delta">—</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Макросы на цель</div>
+      <div class="g4">
+        <div><div style="font-size:10px;color:var(--teal)">Белки</div><div style="font-size:15px;font-weight:500;color:var(--teal)" id="res-b">—</div><div style="font-size:10px;color:var(--text3)">г</div></div>
+        <div><div style="font-size:10px;color:var(--amber)">Жиры</div><div style="font-size:15px;font-weight:500;color:var(--amber)" id="res-z">—</div><div style="font-size:10px;color:var(--text3)">г</div></div>
+        <div><div style="font-size:10px;color:var(--purple)">Углев.</div><div style="font-size:15px;font-weight:500;color:var(--purple)" id="res-u">—</div><div style="font-size:10px;color:var(--text3)">г</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Вода</div><div style="font-size:15px;font-weight:500;color:var(--cyan)" id="res-w">—</div><div style="font-size:10px;color:var(--text3)">мл</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5" id="tdee-note"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="calcTdee()">Рассчитать</button>
+      <button class="btn btn-g" id="tdee-apply-btn" style="display:none" onclick="applyTdeeToGoals()">Применить как цели</button>
+    </div>
+  </div>
+</div>
 
 <!-- ════ MODAL: ADD FOOD ════ -->
 <div class="overlay" id="modal-food">
@@ -865,8 +917,8 @@ function renderToday(){
     return`<button class="qbtn" onclick="quickAddWater('${q.type}',${q.vol})"><span style="font-size:14px">${d.icon}</span><span><span style="font-weight:500">${q.label}</span><br><span class="qbtn-sub">${q.sub}</span></span></button>`;
   }).join('');
   // Streaks
-  document.getElementById('streak-food').textContent=calcFoodStreak();
-  document.getElementById('streak-water').textContent=calcWaterStreak();
+  // TDEE summary
+  if(tdeeData.result) renderTdeeSummaryToday(tdeeData.result);
   // Note
   document.getElementById('day-note').value=dayNotes[currentDate]||'';
 }
@@ -1198,29 +1250,24 @@ function onWTypeChange(){
 
 // Protein КБЖУ per 100ml — used for auto-adding to food log
 const PROTEIN_KBZU = {
-  protein:     {k:65, b:6.0, z:2.0, u:5.0, name:'Протеин (молоко)'},
-  proteinwater:{k:50, b:7.0, z:1.0, u:3.0, name:'Протеин (вода)'},
+  protein:     {k:118, b:31, z:5, u:12, name:'Протеин (молоко)', serving:300},
+  proteinwater:{k:118, b:31, z:5, u:12, name:'Протеин (вода)', serving:300},
 };
 
 function autoAddProteinToFood(type, vol){
   const p = PROTEIN_KBZU[type];
   if(!p) return;
   if(!foodEntries[currentDate]) foodEntries[currentDate]=[];
-  // Avoid duplicate if already added same protein+vol in last 10 seconds
   const now=Date.now();
-  const dupe=foodEntries[currentDate].find(e=>e.name===p.name&&e.weight===vol&&now-e.ts<10000);
+  const dupe=foodEntries[currentDate].find(e=>e.name===p.name&&now-e.ts<10000);
   if(dupe) return;
-  const factor=vol/100;
+  // Use fixed serving values (not per-100ml)
   foodEntries[currentDate].push({
     id:now.toString(36)+'p',
     meal:'snack',
     name:p.name,
-    k:Math.round(p.k*factor),
-    b:Math.round(p.b*factor*10)/10,
-    z:Math.round(p.z*factor*10)/10,
-    u:Math.round(p.u*factor*10)/10,
+    k:p.k, b:p.b, z:p.z, u:p.u,
     weight:vol,
-    k100:p.k, b100:p.b, z100:p.z, u100:p.u,
     ts:now,
     fromWater:true
   });
@@ -1874,10 +1921,129 @@ function renderWeeklySummary(){
 }
 
 // ══════════════════════════════════════════════════════
+// TDEE CALCULATOR
+// ══════════════════════════════════════════════════════
+let tdeeData = {};
+
+function loadTdeeData(){
+  try{ tdeeData=JSON.parse(localStorage.getItem('tdee_data_v1'))||{}; }catch(e){}
+}
+function saveTdeeData(){ localStorage.setItem('tdee_data_v1',JSON.stringify(tdeeData)); }
+
+function openTdeeModal(){
+  // Restore saved values
+  if(tdeeData.weight) document.getElementById('tdee-weight').value=tdeeData.weight;
+  if(tdeeData.height) document.getElementById('tdee-height').value=tdeeData.height;
+  if(tdeeData.age)    document.getElementById('tdee-age').value=tdeeData.age;
+  if(tdeeData.bf)     document.getElementById('tdee-bf').value=tdeeData.bf;
+  if(tdeeData.activity) document.getElementById('tdee-activity').value=tdeeData.activity;
+  if(tdeeData.goal)   document.getElementById('tdee-goal').value=tdeeData.goal;
+  if(tdeeData.result) showTdeeResult(tdeeData.result);
+  document.getElementById('modal-tdee').classList.add('open');
+}
+
+function calcTdee(){
+  const w=parseFloat(document.getElementById('tdee-weight').value);
+  const h=parseFloat(document.getElementById('tdee-height').value);
+  const age=parseFloat(document.getElementById('tdee-age').value);
+  const bf=parseFloat(document.getElementById('tdee-bf').value)||null;
+  const act=parseFloat(document.getElementById('tdee-activity').value);
+  const goal=parseFloat(document.getElementById('tdee-goal').value);
+  if(!w||!h||!age){ showToast('Введи вес, рост и возраст'); return; }
+
+  let bmr, formula;
+  if(bf && bf>0){
+    // Katch-McArdle — точнее когда знаем % жира
+    const lbm=w*(1-bf/100);
+    bmr=Math.round(370+21.6*lbm);
+    formula='Katch-McArdle (сухая масса: '+Math.round(lbm)+'кг)';
+  } else {
+    // Mifflin-St Jeor — золотой стандарт
+    bmr=Math.round(10*w+6.25*h-5*age+5); // мужчина
+    formula='Mifflin-St Jeor';
+  }
+  const tdee=Math.round(bmr*act);
+  const targetK=Math.round(tdee*(1+goal));
+  const delta=targetK-tdee;
+
+  // Макросы
+  // Белок: 2.0-2.2г/кг сухой массы (или 1.8г/кг общего веса)
+  const lbm=bf?w*(1-bf/100):w*0.82;
+  const protein=Math.round(2.0*lbm);
+  // Жиры: 25% от целевых калорий
+  const fat=Math.round(targetK*0.25/9);
+  // Углеводы: остаток
+  const carbs=Math.round((targetK-protein*4-fat*9)/4);
+  // Вода: 35мл/кг веса
+  const water=Math.round(w*35/100)*100;
+
+  const result={bmr,tdee,targetK,delta,protein,fat,carbs,water,formula,goal,w,h,age,bf,act};
+  tdeeData={weight:w,height:h,age,bf,activity:document.getElementById('tdee-activity').value,goal:document.getElementById('tdee-goal').value,result};
+  saveTdeeData();
+  showTdeeResult(result);
+}
+
+function showTdeeResult(r){
+  document.getElementById('tdee-result').style.display='block';
+  document.getElementById('tdee-apply-btn').style.display='';
+  document.getElementById('tdee-formula-label').textContent=r.formula;
+  document.getElementById('res-bmr').textContent=r.bmr;
+  document.getElementById('res-tdee').textContent=r.tdee;
+  document.getElementById('res-target').textContent=r.targetK;
+  const deltaEl=document.getElementById('res-delta');
+  deltaEl.textContent=(r.delta>0?'+':'')+r.delta+' ккал';
+  deltaEl.style.color=r.delta<0?'var(--green)':r.delta>0?'var(--amber)':'var(--text3)';
+  document.getElementById('res-b').textContent=r.protein;
+  document.getElementById('res-z').textContent=r.fat;
+  document.getElementById('res-u').textContent=r.carbs;
+  document.getElementById('res-w').textContent=r.water;
+  // Note
+  const goalPct=Math.round(r.goal*100);
+  let note='';
+  if(r.goal<-0.15) note='Дефицит более 15% — следи за потреблением белка, не менее 2г/кг сухой массы.';
+  else if(r.goal<0) note='Умеренный дефицит. Оптимально для сохранения мышечной массы.';
+  else if(r.goal===0) note='Поддержание веса. Подходит для рекомпозиции тела.';
+  else note='Профицит — набор массы. Следи чтобы прирост не превышал 0.5кг/неделю.';
+  document.getElementById('tdee-note').textContent=note;
+  renderTdeeSummaryToday(r);
+}
+
+function applyTdeeToGoals(){
+  if(!tdeeData.result) return;
+  const r=tdeeData.result;
+  goals.k=r.targetK; goals.b=r.protein; goals.z=r.fat; goals.u=r.carbs;
+  waterNorm=r.water;
+  saveGoalsSt(); saveWaterNormSt();
+  closeModal('modal-tdee');
+  renderToday();
+  showToast('Цели обновлены ✓');
+}
+
+function renderTdeeSummaryToday(r){
+  const el=document.getElementById('tdee-summary-today');
+  if(!el||!r) return;
+  const goalPct=r.goal*100;
+  const goalLabel=goalPct<0?'Дефицит '+Math.abs(goalPct)+'%':goalPct>0?'Профицит '+goalPct+'%':'Поддержание';
+  const goalColor=goalPct<0?'var(--green)':goalPct>0?'var(--amber)':'var(--text3)';
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:500;color:var(--text)">${r.targetK} ккал/день</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:100px;background:var(--bg3);color:${goalColor}">${goalLabel}</span>
+    </div>
+    <div style="display:flex;gap:12px;font-size:12px">
+      <span style="color:var(--teal)">Б ${r.protein}г</span>
+      <span style="color:var(--amber)">Ж ${r.fat}г</span>
+      <span style="color:var(--purple)">У ${r.carbs}г</span>
+      <span style="color:var(--cyan)">Вода ${r.water}мл</span>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
 loadAll();
 loadReminderSettings();
+loadTdeeData();
 updateDateLabels();
 renderToday();
 restoreNotif();
