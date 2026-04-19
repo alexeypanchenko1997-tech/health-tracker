@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Health Tracker</title>
+<style>
+:root{
+  --bg:#111214;--bg2:#1a1c1f;--bg3:#222428;--bg4:#2a2d32;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8e9ea;--text2:#9a9da3;--text3:#5a5d63;
+  --blue:#4a9eff;--blue-dim:#1d3a5c;
+  --green:#5cb85c;--green-dim:#182d18;
+  --amber:#d4a017;--amber-dim:#2d2200;
+  --red:#e05c5c;--red-dim:#2d1515;
+  --purple:#a78bfa;--purple-dim:#1e1a2d;
+  --teal:#2dd4bf;--teal-dim:#0a2d2a;
+  --cyan:#38bdf8;
+  --radius:10px;--radius-lg:14px;
+  --bottom-nav-h:62px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overscroll-behavior:none}
+
+/* LAYOUT */
+.app-wrap{display:flex;flex-direction:column;height:100vh;max-width:600px;margin:0 auto;position:relative}
+.scroll-area{flex:1;overflow-y:auto;padding:.75rem .75rem calc(var(--bottom-nav-h) + .75rem);-webkit-overflow-scrolling:touch}
+.scroll-area::-webkit-scrollbar{display:none}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--bottom-nav-h);background:var(--bg2);border-top:0.5px solid var(--border2);display:flex;align-items:center;justify-content:space-around;z-index:50;max-width:600px;margin:0 auto}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;background:none;border:none;cursor:pointer;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.03em;transition:color .15s;flex:1;min-width:0}
+.bnav-btn.active{color:var(--blue)}
+.bnav-icon{font-size:20px;line-height:1}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+
+/* CARD */
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:11px}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+
+/* KPI TILE */
+.kpi{background:var(--bg3);border-radius:var(--radius);padding:.65rem .85rem;position:relative;overflow:hidden}
+.kpi-lbl{font-size:10px;color:var(--text3);margin-bottom:1px;text-transform:uppercase;letter-spacing:.05em}
+.kpi-val{font-size:20px;font-weight:500;line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.kpi-stripe{position:absolute;bottom:0;left:0;height:3px;border-radius:0 2px 2px 0;transition:width .4s}
+.kpi.ck .kpi-val{color:var(--blue)} .kpi.ck .kpi-stripe{background:var(--blue)}
+.kpi.cb .kpi-val{color:var(--teal)} .kpi.cb .kpi-stripe{background:var(--teal)}
+.kpi.cz .kpi-val{color:var(--amber)} .kpi.cz .kpi-stripe{background:var(--amber)}
+.kpi.cu .kpi-val{color:var(--purple)} .kpi.cu .kpi-stripe{background:var(--purple)}
+.kpi.cw .kpi-val{color:var(--cyan)} .kpi.cw .kpi-stripe{background:var(--cyan)}
+.kpi.over .kpi-val{color:var(--red)!important}
+
+/* PROGRESS */
+.pg-row{margin-bottom:7px}
+.pg-row:last-child{margin-bottom:0}
+.pg-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px}
+.pg-track{background:var(--bg4);border-radius:100px;height:7px;overflow:hidden}
+.pg-fill{height:100%;border-radius:100px;transition:width .4s}
+.pgk{background:var(--blue)} .pgb{background:var(--teal)} .pgz{background:var(--amber)} .pgu{background:var(--purple)} .pgw{background:var(--cyan)}
+.pg-fill.over{background:var(--red)}
+
+/* DATE NAV */
+.date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.dn-btn{background:none;border:0.5px solid var(--border2);border-radius:8px;color:var(--text2);cursor:pointer;padding:5px 14px;font-size:15px;transition:background .15s;line-height:1}
+.dn-btn:hover{background:var(--bg3)}
+.dn-btn.disabled{opacity:.25;pointer-events:none}
+.dn-label{font-size:13px;font-weight:500;color:var(--text);cursor:pointer;padding:5px 10px;border-radius:8px;transition:background .15s}
+.dn-label:hover{background:var(--bg3)}
+
+/* DONUT */
+.donut-wrap{display:flex;align-items:center;gap:14px;margin-top:4px}
+.donut-legend{display:flex;flex-direction:column;gap:5px;flex:1}
+.donut-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* MEALS */
+.meal-block{background:var(--bg3);border-radius:var(--radius);margin-bottom:6px;overflow:hidden}
+.meal-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;cursor:pointer;user-select:none}
+.meal-head-l{display:flex;align-items:center;gap:7px}
+.meal-icon{font-size:15px;width:20px;text-align:center}
+.meal-name-t{font-size:13px;font-weight:500}
+.meal-kcal-t{font-size:11px;color:var(--text3)}
+.meal-macro-t{font-size:11px;color:var(--text3)}
+.meal-arr{font-size:11px;color:var(--text3);transition:transform .2s}
+.meal-arr.open{transform:rotate(180deg)}
+.meal-items{display:none;border-top:0.5px solid var(--border)}
+.meal-items.open{display:block}
+.meal-item{display:flex;align-items:center;padding:6px 10px;border-bottom:0.5px solid var(--border);gap:6px}
+.meal-item:last-child{border-bottom:none}
+.mi-name{flex:1;font-size:13px}
+.mi-macros{font-size:11px;white-space:nowrap;display:flex;gap:5px;align-items:center}
+.mi-del{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:5px;font-size:13px}
+.mi-del:hover{color:var(--red);background:rgba(224,92,92,.1)}
+.meal-add-row{padding:6px 10px}
+.meal-add-btn{background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;font-family:inherit;padding:0}
+
+/* QUICK BTNS (water) */
+.quick-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.qbtn{background:var(--bg3);border:0.5px solid var(--border2);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--text);transition:background .12s;display:flex;align-items:center;gap:6px}
+.qbtn:hover{background:var(--bg4)}
+.qbtn-sub{font-size:10px;color:var(--text3)}
+
+/* FORMS */
+input,select,textarea{width:100%;font-size:13px;padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text);outline:none;-webkit-appearance:none;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:none;line-height:1.4}
+label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px}
+.fg{margin-bottom:9px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.fg4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:9px}
+
+/* BUTTONS */
+.btn{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text);font-family:inherit;transition:background .15s;white-space:nowrap}
+.btn:hover{background:var(--bg4)}
+.btn-p{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.btn-p:hover{background:#1e3f6a}
+.btn-g{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.btn-g:hover{background:#1f3a1f}
+.btn-w{background:rgba(45,212,191,.12);border-color:var(--teal);color:var(--teal)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{font-size:11px;padding:4px 10px}
+.btn-del{background:none;border:0.5px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text3);cursor:pointer;font-family:inherit}
+.btn-del:hover{border-color:var(--red);color:var(--red)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:1.25rem;width:100%;max-width:600px;max-height:88vh;overflow-y:auto}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-title{font-size:15px;font-weight:500}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:2px 4px}
+
+/* SAVED FOODS */
+.sf-list{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;max-height:180px;overflow-y:auto}
+.sf-item{display:flex;align-items:center;padding:7px 10px;background:var(--bg3);border-radius:8px;gap:7px;cursor:pointer;transition:background .12s}
+.sf-item:hover{background:var(--bg4)}
+.sf-name{flex:1;font-size:13px}
+.sf-mac{font-size:11px;color:var(--text3)}
+.sf-del-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;font-size:13px;border-radius:5px}
+.sf-del-btn:hover{color:var(--red)}
+
+/* TABS */
+.tab-row{display:flex;gap:4px;margin-bottom:11px;flex-wrap:wrap}
+.tab{background:none;border:0.5px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit}
+.tab.active{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.tab:hover:not(.active){background:var(--bg3)}
+
+/* CHART */
+.chart{display:flex;gap:3px;align-items:flex-end;height:100px;padding-bottom:18px;position:relative}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;position:relative}
+.bv{font-size:9px;color:var(--text2);font-weight:500;min-height:11px;text-align:center}
+.bb{width:100%;border-radius:3px 3px 0 0;min-height:2px;cursor:pointer}
+.bl{font-size:9px;color:var(--text3);text-align:center;position:absolute;bottom:-16px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* CALENDAR */
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.cal-nav{background:none;border:0.5px solid var(--border);border-radius:8px;color:var(--text2);cursor:pointer;padding:4px 12px;font-size:14px}
+.cal-nav:hover{background:var(--bg3)}
+.cal-month{font-size:14px;font-weight:500}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dn{text-align:center;font-size:10px;color:var(--text3);padding:3px 0;font-weight:500}
+.cal-d{text-align:center;padding:5px 2px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--text2);border:0.5px solid transparent;transition:all .12s;position:relative;line-height:1.4}
+.cal-d:hover{background:var(--bg3);color:var(--text)}
+.cal-d.other{color:var(--text3)}
+.cal-d.today{color:var(--blue);font-weight:600}
+.cal-d.selected{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.cal-d.has-k::after,.cal-d.has-w::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%}
+.cal-d.has-k::after{background:var(--green)} .cal-d.partial-k::after{background:var(--amber)}
+.cal-d.has-w::before{content:'';position:absolute;bottom:2px;left:calc(50% - 5px);width:4px;height:4px;border-radius:50%;background:var(--cyan)}
+
+/* STREAK */
+.streak-box{display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:var(--radius);padding:.6rem .9rem}
+.streak-num{font-size:28px;font-weight:500;line-height:1}
+.streak-sub{font-size:11px;color:var(--text2)}
+.streak-sub b{color:var(--text);font-weight:500}
+
+/* TOGGLE */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-sl{position:absolute;inset:0;background:var(--bg4);border-radius:100px;cursor:pointer;transition:.2s}
+.toggle-sl::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-sl{background:var(--blue)}
+.toggle input:checked+.toggle-sl::before{transform:translateX(16px)}
+
+/* SUMMARY ROW */
+.sr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.sr:last-child{border-bottom:none}
+.sr-k{color:var(--text2)}
+.sr-v{font-weight:500}
+
+/* LOG TABLE (water) */
+.log-t{width:100%;font-size:13px;border-collapse:collapse}
+.log-t th{font-size:10px;font-weight:500;color:var(--text3);text-align:left;padding:3px 6px;border-bottom:0.5px solid var(--border)}
+.log-t td{padding:5px 6px;border-bottom:0.5px solid var(--border)}
+.log-t tr:last-child td{border-bottom:none}
+
+/* BADGE */
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:100px;font-weight:500}
+.bw{background:#1a2d42;color:#6aafff}.bt{background:#1a2d1a;color:#72c472}.be{background:#2d2200;color:#e0a020}.bo{background:#2a1a2d;color:#c472c4}.bp{background:#1e1a2d;color:#a78bfa}
+
+/* MISC */
+.sep{height:0.5px;background:var(--border);margin:11px 0}
+.empty{text-align:center;color:var(--text3);padding:20px 0;font-size:13px}
+.tip{font-size:13px;color:var(--text2);margin-top:7px;line-height:1.5}
+.tip b{color:var(--text);font-weight:500}
+.note-area{font-size:13px}
+.section-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:11px 0 6px}
+.notif-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+/* TODAY OVERVIEW HEADER */
+.day-overview{display:flex;gap:8px;margin-bottom:10px}
+.day-ring{flex-shrink:0}
+.day-summary{flex:1;display:flex;flex-direction:column;justify-content:center;gap:5px}
+.ds-row{display:flex;align-items:center;gap:6px;font-size:12px}
+.ds-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ds-label{color:var(--text2);flex:1}
+.ds-val{color:var(--text);font-weight:500}
+
+@media(max-width:400px){.g4{grid-template-columns:1fr 1fr}.fg4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app-wrap">
+<div class="scroll-area" id="scroll-area">
+
+<!-- ══════════════════════════════════════════
+     VIEW: TODAY
+══════════════════════════════════════════ -->
+<div id="view-today" class="view active">
+  <div class="date-nav">
+    <button class="dn-btn" onclick="changeDay(-1)">‹</button>
+    <span class="dn-label" onclick="openDayPicker()" id="dn-label">—</span>
+    <button class="dn-btn" id="dn-next" onclick="changeDay(1)">›</button>
+  </div>
+
+  <!-- КБЖУ прогресс -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Питание</span>
+      <button class="btn btn-p" style="padding:4px 12px;font-size:12px" onclick="openFoodModal(null)">+ Добавить</button>
+    </div>
+    <div class="g4" style="margin-bottom:10px">
+      <div class="kpi ck"><div class="kpi-lbl">Ккал</div><div class="kpi-val" id="t-k">0</div><div class="kpi-sub" id="t-kg">/ 0</div><div class="kpi-stripe" id="ts-k"></div></div>
+      <div class="kpi cb"><div class="kpi-lbl">Белки</div><div class="kpi-val" id="t-b">0</div><div class="kpi-sub" id="t-bg">/ 0 г</div><div class="kpi-stripe" id="ts-b"></div></div>
+      <div class="kpi cz"><div class="kpi-lbl">Жиры</div><div class="kpi-val" id="t-z">0</div><div class="kpi-sub" id="t-zg">/ 0 г</div><div class="kpi-stripe" id="ts-z"></div></div>
+      <div class="kpi cu"><div class="kpi-lbl">Углеводы</div><div class="kpi-val" id="t-u">0</div><div class="kpi-sub" id="t-ug">/ 0 г</div><div class="kpi-stripe" id="ts-u"></div></div>
+    </div>
+    <div id="food-progress-bars"></div>
+  </div>
+
+  <!-- Вода -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Гидратация</span>
+      <button class="btn btn-w" style="padding:4px 12px;font-size:12px" onclick="quickAddWater('water',200)">+ 200 мл</button>
+    </div>
+    <div class="g4" style="margin-bottom:10px">
+      <div class="kpi cw"><div class="kpi-lbl">Выпито</div><div class="kpi-val" id="tw-total">0</div><div class="kpi-sub">мл</div><div class="kpi-stripe" id="tsw"></div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Эф. гидр.</div><div class="kpi-val" id="tw-hydro">0</div><div class="kpi-sub">мл</div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Выполнено</div><div class="kpi-val" id="tw-pct">0%</div><div class="kpi-sub" id="tw-norm">/ 0 мл</div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Осталось</div><div class="kpi-val" id="tw-left">—</div><div class="kpi-sub">мл</div></div>
+    </div>
+    <div class="pg-row"><div class="pg-track"><div class="pg-fill pgw" id="pw-bar"></div></div></div>
+    <div class="tip" id="tw-tip"></div>
+
+    <!-- Quick add water -->
+    <div class="section-lbl" style="margin-top:10px">Быстро добавить</div>
+    <div class="quick-row" id="today-quick-btns"></div>
+  </div>
+
+  <!-- Streak + note -->
+  <div class="g2">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Streak</div>
+      <div class="streak-box">
+        <div>
+          <div class="streak-num" id="streak-food" style="color:var(--amber)">0</div>
+          <div class="streak-sub">🍽️ питание</div>
+        </div>
+      </div>
+      <div style="margin-top:6px">
+      <div class="streak-box">
+        <div>
+          <div class="streak-num" id="streak-water" style="color:var(--cyan)">0</div>
+          <div class="streak-sub">💧 вода</div>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Заметка к дню</div>
+      <textarea id="day-note" class="note-area" rows="5" placeholder="Читмил, тренировка, болел..." oninput="saveNote()"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: ПИТАНИЕ
+══════════════════════════════════════════ -->
+<div id="view-food" class="view">
+  <div class="date-nav">
+    <button class="dn-btn" onclick="changeDay(-1)">‹</button>
+    <span class="dn-label" onclick="openDayPicker()" id="dn-label-f">—</span>
+    <button class="dn-btn" id="dn-next-f" onclick="changeDay(1)">›</button>
+  </div>
+
+  <!-- БЖУ Donut -->
+  <div class="card">
+    <div class="card-title">Состав рациона</div>
+    <div class="donut-wrap">
+      <svg id="food-donut" width="90" height="90" viewBox="0 0 90 90" style="flex-shrink:0"></svg>
+      <div class="donut-legend" id="food-donut-legend"></div>
+    </div>
+  </div>
+
+  <!-- Meals -->
+  <div id="meals-container"></div>
+  <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openFoodModal(null)">+ Добавить приём пищи</button>
+
+  <!-- Copy yesterday -->
+  <button class="btn" style="width:100%;margin-bottom:10px;font-size:12px" onclick="copyYesterday()">📋 Скопировать вчерашний день</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: ВОДА
+══════════════════════════════════════════ -->
+<div id="view-water" class="view">
+  <div class="date-nav">
+    <button class="dn-btn" onclick="changeDay(-1)">‹</button>
+    <span class="dn-label" onclick="openDayPicker()" id="dn-label-w">—</span>
+    <button class="dn-btn" id="dn-next-w" onclick="changeDay(1)">›</button>
+  </div>
+
+  <!-- Norm + streak -->
+  <div class="card">
+    <div class="card-title">Норма</div>
+    <div class="g2">
+      <div class="fg"><label>Дневная норма (мл)</label><input type="number" id="water-norm-input" value="2000" min="500" max="6000" step="50" oninput="saveWaterNorm()"></div>
+      <div class="kpi cw" style="margin-top:19px"><div class="kpi-lbl">Streak 💧</div><div class="kpi-val" id="wstreak-big" style="color:var(--cyan)">0</div><div class="kpi-sub">дней подряд</div></div>
+    </div>
+  </div>
+
+  <!-- Quick add -->
+  <div class="card">
+    <div class="card-title">Добавить — <span id="wdate-lbl" style="color:var(--text2)"></span></div>
+    <div class="section-lbl">Быстро</div>
+    <div class="quick-row" id="water-quick-btns"></div>
+    <div class="section-lbl" style="margin-top:12px">Вручную</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+      <div><label>Напиток</label>
+        <select id="w-type" onchange="onWTypeChange()">
+          <option value="water|1.0">💧 Вода</option>
+          <option value="tea|0.8">🍵 Чай</option>
+          <option value="energy|0.5">⚡ Энергетик</option>
+          <option value="protein|0.75">🥛 Протеин (молоко)</option>
+          <option value="proteinwater|0.9">🥤 Протеин (вода)</option>
+          <option value="other|0.8">🫗 Другое</option>
+        </select>
+      </div>
+      <div><label>Объём (мл)</label><input type="number" id="w-vol" value="250" min="10" max="3000" step="10"></div>
+      <button class="btn btn-w" onclick="addWaterEntry()" style="padding:7px 16px">+</button>
+    </div>
+    <div id="w-custom-row" style="display:none;margin-top:6px"><label>Название</label><input type="text" id="w-custom" placeholder="Сок, газировка..."></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="card">
+    <div class="card-title">Прогресс</div>
+    <div class="g4" style="margin-bottom:10px">
+      <div class="kpi cw"><div class="kpi-lbl">Выпито</div><div class="kpi-val" id="wt">0</div><div class="kpi-sub">мл</div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Эф. гидр.</div><div class="kpi-val" id="wh">0</div><div class="kpi-sub">мл</div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Выполнено</div><div class="kpi-val" id="wp">0%</div></div>
+      <div class="kpi cw"><div class="kpi-lbl">Осталось</div><div class="kpi-val" id="wl">—</div><div class="kpi-sub">мл</div></div>
+    </div>
+    <div class="pg-track"><div class="pg-fill pgw" id="wbar"></div></div>
+    <div class="tip" id="wtip"></div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="card-title">Журнал</div>
+    <table class="log-t"><thead><tr><th>Напиток</th><th>Объём</th><th>Время</th><th>Эф.</th><th></th></tr></thead>
+    <tbody id="wlog"></tbody></table>
+  </div>
+
+  <!-- Notifications -->
+  <div class="card">
+    <div class="card-title">Напоминания</div>
+    <div class="notif-row">
+      <div><div style="font-size:13px;font-weight:500">Уведомления</div><div style="font-size:11px;color:var(--text3)" id="notif-status">выключены</div></div>
+      <label class="toggle"><input type="checkbox" id="notif-toggle" onchange="toggleNotif()"><span class="toggle-sl"></span></label>
+    </div>
+    <div id="notif-interval-row" style="display:none;margin-top:8px"><label>Каждые (часов)</label>
+      <select id="notif-interval" onchange="saveNotifSettings()" style="width:auto"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+    </div>
+  </div>
+
+  <!-- Breakdown donut -->
+  <div class="card">
+    <div class="card-title">Состав по напиткам — <span id="wbreakdown-lbl" style="color:var(--text2)">за 7 дней</span></div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setWaterPeriod('7d',this)">7 дней</button>
+      <button class="tab" onclick="setWaterPeriod('30d',this)">30 дней</button>
+      <button class="tab" onclick="setWaterPeriod('3m',this)">3 месяца</button>
+    </div>
+    <div class="donut-wrap">
+      <svg id="wdonut" width="90" height="90" viewBox="0 0 90 90" style="flex-shrink:0"></svg>
+      <div class="donut-legend" id="wdonut-legend"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: ИСТОРИЯ
+══════════════════════════════════════════ -->
+<div id="view-history" class="view">
+  <div class="card">
+    <div class="card-title">Календарь</div>
+    <div class="cal-hdr">
+      <button class="cal-nav" onclick="hcalPrev()">‹</button>
+      <span class="cal-month" id="hcal-month"></span>
+      <button class="cal-nav" onclick="hcalNext()">›</button>
+    </div>
+    <div class="cal-g">
+      <div class="cal-dn">Пн</div><div class="cal-dn">Вт</div><div class="cal-dn">Ср</div><div class="cal-dn">Чт</div><div class="cal-dn">Пт</div><div class="cal-dn">Сб</div><div class="cal-dn">Вс</div>
+      <div id="hcal-days" style="display:contents"></div>
+    </div>
+    <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:var(--text3)">
+      <span>🟢 КБЖУ выполнено</span><span>🟡 КБЖУ частично</span><span>🔵 Вода внесена</span>
+    </div>
+  </div>
+  <div id="hist-detail"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: ЕЩЁ (Stats + Settings)
+══════════════════════════════════════════ -->
+<div id="view-more" class="view">
+
+  <!-- STATS КБЖУ -->
+  <div class="card">
+    <div class="card-title">Тренды питания</div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setStatPeriod(7,this)">7 дней</button>
+      <button class="tab" onclick="setStatPeriod(30,this)">30 дней</button>
+      <button class="tab" onclick="setStatPeriod(365,this)">Год</button>
+    </div>
+    <div class="g4" style="margin-bottom:10px">
+      <div class="kpi ck"><div class="kpi-lbl">Ккал ср.</div><div class="kpi-val" id="avg-k">—</div></div>
+      <div class="kpi cb"><div class="kpi-lbl">Белки ср.</div><div class="kpi-val" id="avg-b">—</div></div>
+      <div class="kpi cz"><div class="kpi-lbl">Жиры ср.</div><div class="kpi-val" id="avg-z">—</div></div>
+      <div class="kpi cu"><div class="kpi-lbl">Углев. ср.</div><div class="kpi-val" id="avg-u">—</div></div>
+    </div>
+    <div style="display:flex;gap:4px;margin-bottom:8px">
+      <button class="btn btn-sm" onclick="setStatMetric('k',this)" id="sm-k" style="border-color:var(--blue);color:var(--blue)">Ккал</button>
+      <button class="btn btn-sm" onclick="setStatMetric('b',this)" id="sm-b">Б</button>
+      <button class="btn btn-sm" onclick="setStatMetric('z',this)" id="sm-z">Ж</button>
+      <button class="btn btn-sm" onclick="setStatMetric('u',this)" id="sm-u">У</button>
+    </div>
+    <div class="chart" id="food-chart"></div>
+  </div>
+
+  <!-- STATS Вода -->
+  <div class="card">
+    <div class="card-title">Тренды гидратации</div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setWaterStatPeriod('7d',this)">7 дней</button>
+      <button class="tab" onclick="setWaterStatPeriod('30d',this)">30 дней</button>
+      <button class="tab" onclick="setWaterStatPeriod('3m',this)">3 месяца</button>
+    </div>
+    <div class="chart" id="water-chart"></div>
+    <div style="font-size:12px;color:var(--text2);margin-top:10px;line-height:1.8" id="wstat-summary"></div>
+  </div>
+
+  <!-- GOALS -->
+  <div class="card">
+    <div class="card-title">Цели КБЖУ</div>
+    <div class="fg4">
+      <div><label>Ккал</label><input type="number" id="goal-k" placeholder="2500"></div>
+      <div><label>Белки г</label><input type="number" id="goal-b" placeholder="180"></div>
+      <div><label>Жиры г</label><input type="number" id="goal-z" placeholder="70"></div>
+      <div><label>Углев. г</label><input type="number" id="goal-u" placeholder="250"></div>
+    </div>
+    <button class="btn btn-p" onclick="saveGoals()">Сохранить</button>
+  </div>
+
+  <!-- SAVED FOODS -->
+  <div class="card">
+    <div class="card-title">Мои продукты (<span id="sf-count">0</span>) · Встроенная база: 83</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">В поиске работают оба источника. Звёздочка ★ — твои сохранённые.</div>
+    <div class="empty" id="sf-empty-s">Пока пусто. Добавляй при вводе еды.</div>
+    <div id="sf-list-settings"></div>
+  </div>
+
+  <!-- TOP FOODS -->
+  <div class="card">
+    <div class="card-title">Топ блюд за 7 дней</div>
+    <div id="weekly-top-foods"><span style="color:var(--text3);font-size:12px">Загрузка...</span></div>
+  </div>
+
+  <!-- FOOD REMINDERS -->
+  <div class="card">
+    <div class="card-title">Напоминания о питании</div>
+    <div class="fg4" style="margin-bottom:8px">
+      <div><label>🥣 Завтрак</label><input type="time" id="notif-breakfast" value="09:00" onchange="saveReminderSettings()"></div>
+      <div><label>🍽️ Обед</label><input type="time" id="notif-lunch" value="14:00" onchange="saveReminderSettings()"></div>
+      <div><label>🥘 Ужин</label><input type="time" id="notif-dinner" value="20:00" onchange="saveReminderSettings()"></div>
+      <div><label>Вкл/Выкл</label>
+        <label class="toggle" style="margin-top:6px"><input type="checkbox" id="food-notif-toggle" onchange="toggleFoodNotif()"><span class="toggle-sl"></span></label>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3)" id="food-notif-status"></div>
+  </div>
+
+  <!-- WATER REMINDERS -->
+  <div class="card">
+    <div class="card-title">Напоминания о воде</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Каждый час с указанного времени до указанного</div>
+    <div class="fg2" style="margin-bottom:8px">
+      <div><label>С (часов)</label><input type="time" id="notif-water-from" value="08:00" onchange="saveReminderSettings()"></div>
+      <div><label>До (часов)</label><input type="time" id="notif-water-to" value="20:00" onchange="saveReminderSettings()"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="font-size:13px;font-weight:500;color:var(--text)">Включить</label>
+      <label class="toggle"><input type="checkbox" id="water-notif-toggle" onchange="toggleWaterHourlyNotif()"><span class="toggle-sl"></span></label>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px" id="water-notif-status"></div>
+  </div>
+
+  <!-- DATA -->
+  <div class="card">
+    <div class="card-title">Данные</div>
+    <div class="btn-row">
+      <button class="btn" onclick="exportAll()">📤 Экспорт</button>
+      <button class="btn" onclick="triggerImport()">📥 Импорт</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+    <div style="font-size:11px;color:var(--text3);margin-top:8px">Все данные (КБЖУ + вода) в одном файле. При импорте старые данные объединяются с новыми.</div>
+  </div>
+</div>
+
+</div><!-- /scroll-area -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="bnav-btn active" onclick="showView('today',this)"><span class="bnav-icon">🏠</span>Сегодня</button>
+  <button class="bnav-btn" onclick="showView('food',this)"><span class="bnav-icon">🍽️</span>Питание</button>
+  <button class="bnav-btn" onclick="showView('water',this)"><span class="bnav-icon">💧</span>Вода</button>
+  <button class="bnav-btn" onclick="showView('history',this)"><span class="bnav-icon">📅</span>История</button>
+  <button class="bnav-btn" onclick="showView('more',this)"><span class="bnav-icon">📊</span>Ещё</button>
+</nav>
+</div><!-- /app-wrap -->
+
+<!-- ════ MODAL: ADD FOOD ════ -->
+<div class="overlay" id="modal-food">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-title" id="modal-food-title">Добавить</span><button class="modal-close" onclick="closeModal('modal-food')">✕</button></div>
+    <div class="fg"><label>Категория</label>
+      <select id="add-meal-type">
+        <option value="breakfast">🥣 Завтрак</option>
+        <option value="lunch">🍽️ Обед</option>
+        <option value="dinner">🥘 Ужин</option>
+        <option value="snack">🍎 Перекус</option>
+      </select>
+    </div>
+    <!-- saved search -->
+    <label>Поиск по базе</label>
+    <div style="margin-bottom:5px"><input type="text" id="sf-search" placeholder="Начни вводить название..." oninput="renderSFSearch()" autocomplete="off"></div>
+    <div class="sf-list" id="sf-search-results"></div>
+    <div class="sep"></div>
+    <div class="fg"><label>Название</label><input type="text" id="add-name" placeholder="Гречка с курицей" oninput="onFoodNameInput()"></div>
+    <!-- weight — visible; per-100g fields hidden, used only for calc -->
+    <input type="hidden" id="add-k100">
+    <input type="hidden" id="add-b100">
+    <input type="hidden" id="add-z100">
+    <input type="hidden" id="add-u100b">
+    <div id="weight-row" style="margin-bottom:9px">
+      <label>Вес / порция, г <span style="font-size:10px;color:var(--text3)" id="weight-hint"></span></label>
+      <input type="number" id="add-weight" placeholder="100" min="1" oninput="calcFromWeight()" style="margin-top:3px">
+    </div>
+    <div class="fg4">
+      <div><label>Ккал</label><input type="number" id="add-k" placeholder="0" min="0"></div>
+      <div><label>Белки г</label><input type="number" id="add-b" placeholder="0" min="0"></div>
+      <div><label>Жиры г</label><input type="number" id="add-z" placeholder="0" min="0"></div>
+      <div><label>Углев. г</label><input type="number" id="add-u" placeholder="0" min="0"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" id="modal-food-btn" onclick="submitFoodEntry(false)">Добавить</button>
+      <button class="btn btn-g" id="modal-food-save-btn" onclick="submitFoodEntry(true)">+ Сохранить в базу</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: DAY PICKER ════ -->
+<div class="overlay" id="modal-picker">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-title">Выбрать дату</span><button class="modal-close" onclick="closeModal('modal-picker')">✕</button></div>
+    <div class="cal-hdr">
+      <button class="cal-nav" onclick="pickerPrev()">‹</button>
+      <span class="cal-month" id="picker-month"></span>
+      <button class="cal-nav" onclick="pickerNext()">›</button>
+    </div>
+    <div class="cal-g">
+      <div class="cal-dn">Пн</div><div class="cal-dn">Вт</div><div class="cal-dn">Ср</div><div class="cal-dn">Чт</div><div class="cal-dn">Пт</div><div class="cal-dn">Сб</div><div class="cal-dn">Вс</div>
+      <div id="picker-days" style="display:contents"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════
+const DRINKS = {
+  water:{label:'Вода',coef:1.0,badge:'bw',icon:'💧',color:'#4a9eff'},
+  tea:{label:'Чай',coef:0.8,badge:'bt',icon:'🍵',color:'#5cb85c'},
+  energy:{label:'Энергетик',coef:0.5,badge:'be',icon:'⚡',color:'#d4a017'},
+  protein:{label:'Протеин/молоко',coef:0.75,badge:'bp',icon:'🥛',color:'#a78bfa'},
+  proteinwater:{label:'Протеин/вода',coef:0.9,badge:'bw',icon:'🥤',color:'#60c4ff'},
+  other:{label:'Другой',coef:0.8,badge:'bo',icon:'🫗',color:'#c472c4'}
+};
+const QUICK_WATER = [
+  {type:'water',vol:200,label:'Стакан',sub:'200 мл'},
+  {type:'tea',vol:350,label:'Кружка',sub:'чай'},
+  {type:'energy',vol:250,label:'Банка малая',sub:'250 мл'},
+  {type:'energy',vol:473,label:'Банка большая',sub:'473 мл'},
+  {type:'protein',vol:300,label:'Протеин',sub:'молоко'},
+];
+const MEAL_META = {
+  breakfast:{icon:'🥣',label:'Завтрак'},
+  lunch:{icon:'🍽️',label:'Обед'},
+  dinner:{icon:'🥘',label:'Ужин'},
+  snack:{icon:'🍎',label:'Перекус'},
+};
+const MEAL_ORDER = ['breakfast','lunch','dinner','snack'];
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+// КБЖУ — new storage
+let foodEntries = {}; // { 'YYYY-MM-DD': [{id,meal,name,k,b,z,u}] }
+let goals = {k:2500,b:180,z:70,u:250};
+let savedFoods = [];
+let dayNotes = {}; // {'YYYY-MM-DD': 'text'}
+
+// Water — original keys preserved
+let waterEntries = []; // [{id, date:'DD.MM.YYYY', type, vol, coef, customName?}]
+let waterNorm = 2000;
+
+// UI state
+let currentDate = isoToday();
+let hcalYear, hcalMonth;
+let pickerYear, pickerMonth;
+let statPeriod = 7;
+let statMetric = 'k';
+let waterChartPeriod = '7d';
+let waterBreakPeriod = '7d';
+let addingMealType = null;
+let notifTimer = null;
+
+// ── DATE HELPERS ─────────────────────────────────────
+function isoToday(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseIso(s){ const[y,m,dd]=s.split('-').map(Number); return new Date(y,m-1,dd); }
+// hydration tracker date format
+function hydDateKey(d){ return`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+function hydKeyFromIso(iso){ const d=parseIso(iso); return hydDateKey(d); }
+function todayHydKey(){ return hydDateKey(new Date()); }
+function isoFromHydKey(k){ const[dd,mm,yy]=k.split('.'); return`${yy}-${mm}-${dd}`; }
+
+function fmtLabel(iso){
+  const d = parseIso(iso);
+  const t = isoToday(), yd = isoDate(new Date(new Date().setDate(new Date().getDate()-1)));
+  if(iso===t) return 'Сегодня, '+d.toLocaleDateString('ru',{day:'numeric',month:'long'});
+  if(iso===yd) return 'Вчера, '+d.toLocaleDateString('ru',{day:'numeric',month:'long'});
+  return d.toLocaleDateString('ru',{weekday:'short',day:'numeric',month:'long'});
+}
+
+// ── BUILT-IN FOOD DATABASE ───────────────────────────
+const BUILTIN_FOODS = [
+  // 🥩 Мясо и птица
+  {id:'bf001',name:'Куриная грудка (сырая)',cat:'Мясо и птица',k:113,b:23.6,z:1.9,u:0},
+  {id:'bf002',name:'Куриная грудка (варёная)',cat:'Мясо и птица',k:165,b:31,z:3.6,u:0},
+  {id:'bf003',name:'Куриное бедро без кожи',cat:'Мясо и птица',k:160,b:20,z:9,u:0},
+  {id:'bf004',name:'Говядина (вырезка)',cat:'Мясо и птица',k:187,b:18.5,z:12.5,u:0},
+  {id:'bf005',name:'Стейк из индейки По-мексикански «Индилайт»',cat:'Мясо и птица',k:90,b:16,z:2.5,u:0},
+  {id:'bf006',name:'Колбаса Докторская «Клинский»',cat:'Мясо и птица',k:196,b:13,z:16,u:0},
+  // 🐟 Рыба и морепродукты
+  {id:'bf007',name:'Лосось / сёмга',cat:'Рыба',k:208,b:20,z:13,u:0},
+  {id:'bf008',name:'Тунец (консервы в собственном соку)',cat:'Рыба',k:96,b:22,z:1,u:0},
+  {id:'bf009',name:'Креветки варёные',cat:'Рыба',k:99,b:20.5,z:1.5,u:0},
+  // 🥚 Яйца
+  {id:'bf010',name:'Яйцо куриное СО «Роскар»',cat:'Молочное и яйца',k:150,b:13,z:11,u:0},
+  {id:'bf011',name:'Яйцо куриное СО «Из Лавки»',cat:'Молочное и яйца',k:157,b:12.7,z:11.5,u:0.7},
+  {id:'bf012',name:'Яйцо куриное варёное',cat:'Молочное и яйца',k:155,b:13,z:11,u:1.1},
+  // 🥛 Молочное
+  {id:'bf013',name:'Молоко 1.8% Parmalat безлактозное',cat:'Молочное и яйца',k:47,b:3,z:1.8,u:4.7},
+  {id:'bf014',name:'Молоко 2.5% «Домик в деревне»',cat:'Молочное и яйца',k:53,b:3,z:2.5,u:4.7},
+  {id:'bf015',name:'Йогурт греческий натуральный',cat:'Молочное и яйца',k:97,b:6,z:5,u:3.8},
+  {id:'bf016',name:'Сметана 15%',cat:'Молочное и яйца',k:158,b:2.6,z:15,u:3.1},
+  {id:'bf017',name:'Сыр Laplandia ProTein 33%',cat:'Молочное и яйца',k:273,b:30,z:17,u:0},
+  {id:'bf018',name:'Сыр Маасдам «Из Лавки» 45%',cat:'Молочное и яйца',k:350,b:28,z:26.5,u:0},
+  {id:'bf019',name:'Масло сливочное 82.5% «Экомилк»',cat:'Молочное и яйца',k:748,b:0.6,z:82.5,u:0.8},
+  {id:'bf020',name:'Сырок творожный «Творобушки» манго',cat:'Молочное и яйца',k:347,b:7.7,z:21,u:31.7},
+  // 🌾 Крупы (сухие)
+  {id:'bf021',name:'Рис Жасмин «Мистраль» (сухой)',cat:'Крупы',k:343,b:7.2,z:0.4,u:76.3},
+  {id:'bf022',name:'Рис Басмати «Мистраль» (сухой)',cat:'Крупы',k:348,b:7.6,z:0.6,u:76.4},
+  {id:'bf023',name:'Рис длиннозёрный «Увелка» (сухой)',cat:'Крупы',k:350,b:8,z:1,u:78},
+  {id:'bf024',name:'Рис варёный',cat:'Крупы',k:130,b:2.7,z:0.3,u:28.2},
+  {id:'bf025',name:'Гречка варёная',cat:'Крупы',k:110,b:4.2,z:1.1,u:21.3},
+  {id:'bf026',name:'Овсянка варёная',cat:'Крупы',k:88,b:3,z:1.7,u:15},
+  {id:'bf027',name:'Макароны варёные',cat:'Крупы',k:158,b:5.5,z:0.9,u:30.9},
+  {id:'bf028',name:'Семена кунжута белые «Из Лавки»',cat:'Крупы',k:565,b:19.4,z:48.7,u:12.2},
+  // 🥦 Овощи
+  {id:'bf029',name:'Огурцы короткоплодные',cat:'Овощи',k:15,b:0.8,z:0.1,u:2.8},
+  {id:'bf030',name:'Перец красный',cat:'Овощи',k:28,b:1.3,z:0,u:5.3},
+  {id:'bf031',name:'Зелёный лук',cat:'Овощи',k:19,b:1.3,z:0.1,u:4.6},
+  {id:'bf032',name:'Лук Ялтинский',cat:'Овощи',k:32,b:1.8,z:0.2,u:7.3},
+  {id:'bf033',name:'Картофель',cat:'Овощи',k:77,b:2,z:0.1,u:17},
+  {id:'bf034',name:'Салат Айсберг',cat:'Овощи',k:14,b:1,z:0.1,u:1.8},
+  {id:'bf035',name:'Помидор',cat:'Овощи',k:18,b:0.9,z:0.2,u:3.8},
+  {id:'bf036',name:'Морковь',cat:'Овощи',k:35,b:1.3,z:0.1,u:6.9},
+  {id:'bf037',name:'Брокколи',cat:'Овощи',k:34,b:2.8,z:0.4,u:6.6},
+  {id:'bf038',name:'Авокадо',cat:'Овощи',k:160,b:2,z:14.7,u:8.5},
+  {id:'bf039',name:'Шпинат',cat:'Овощи',k:23,b:2.9,z:0.4,u:3.6},
+  {id:'bf040',name:'Кабачок',cat:'Овощи',k:24,b:0.6,z:0.3,u:4.6},
+  {id:'bf041',name:'Чеснок',cat:'Овощи',k:149,b:6.5,z:0.5,u:33.1},
+  // 🍎 Фрукты и ягоды
+  {id:'bf042',name:'Банан',cat:'Фрукты и ягоды',k:89,b:1.1,z:0.3,u:23},
+  {id:'bf043',name:'Зелёный банан',cat:'Фрукты и ягоды',k:95,b:1.5,z:0.2,u:21},
+  {id:'bf044',name:'Груша Форель',cat:'Фрукты и ягоды',k:42,b:0.4,z:0.1,u:11.4},
+  {id:'bf045',name:'Голубика',cat:'Фрукты и ягоды',k:39,b:1,z:0.5,u:6.6},
+  {id:'bf046',name:'Киви',cat:'Фрукты и ягоды',k:46,b:1,z:0.6,u:10.3},
+  {id:'bf047',name:'Яблоко',cat:'Фрукты и ягоды',k:52,b:0.3,z:0.2,u:13.8},
+  {id:'bf048',name:'Апельсин',cat:'Фрукты и ягоды',k:43,b:0.9,z:0.2,u:8.1},
+  {id:'bf049',name:'Мандарин',cat:'Фрукты и ягоды',k:53,b:0.8,z:0.2,u:13.3},
+  {id:'bf050',name:'Клубника',cat:'Фрукты и ягоды',k:32,b:0.7,z:0.3,u:7.7},
+  {id:'bf051',name:'Черника',cat:'Фрукты и ягоды',k:44,b:0.7,z:0.5,u:9.7},
+  {id:'bf052',name:'Виноград',cat:'Фрукты и ягоды',k:67,b:0.6,z:0.2,u:17.2},
+  {id:'bf053',name:'Арбуз',cat:'Фрукты и ягоды',k:30,b:0.6,z:0.1,u:7.6},
+  // 🍱 Готовые блюда Лавки
+  {id:'bf054',name:'Паста густой трюфель «Ингредика»',cat:'Готовые блюда',k:146.5,b:6.7,z:6.1,u:16.2},
+  {id:'bf055',name:'Паста с курицей в сливочно-грибном соусе «Из Лавки»',cat:'Готовые блюда',k:162,b:8.1,z:6.2,u:18.5},
+  {id:'bf056',name:'Пенне четыре сыра в сливочном соусе «Из Лавки»',cat:'Готовые блюда',k:207.1,b:6.6,z:13.9,u:13.9},
+  {id:'bf057',name:'Сосиски с макаронами и кетчупом «Из Лавки»',cat:'Готовые блюда',k:162,b:6.4,z:8,u:16},
+  {id:'bf058',name:'Онигири с сёмгой холодного копчения «Из Лавки»',cat:'Готовые блюда',k:211,b:7.2,z:6.6,u:30.8},
+  {id:'bf059',name:'Онигири Том ям «Из Лавки»',cat:'Готовые блюда',k:232,b:5.8,z:6.8,u:36.8},
+  {id:'bf060',name:'Курица в соусе терияки с рисом и овощами «Из Лавки»',cat:'Готовые блюда',k:163,b:9.1,z:5.3,u:19.6},
+  {id:'bf061',name:'Курица в сливочном соусе с грибами и пюре «Из Лавки»',cat:'Готовые блюда',k:141,b:8.3,z:7.6,u:10},
+  {id:'bf062',name:'Куриная грудка-гриль с овощами «Из Лавки»',cat:'Готовые блюда',k:131.4,b:10.3,z:7,u:6.8},
+  {id:'bf063',name:'Бефстроганов из говядины с гречкой «Из Лавки»',cat:'Готовые блюда',k:161,b:11.2,z:7.5,u:11.3},
+  {id:'bf064',name:'Бефстроганов с картофельным пюре «Из Лавки»',cat:'Готовые блюда',k:142,b:7.7,z:7.3,u:11.3},
+  {id:'bf065',name:'Ароматный плов с говядиной «Из Лавки»',cat:'Готовые блюда',k:196.2,b:8.1,z:10,u:18.5},
+  {id:'bf066',name:'Бифштекс с пюре и карамелизированным луком «Мирлис»',cat:'Готовые блюда',k:202.1,b:9.7,z:10.5,u:17.2},
+  {id:'bf067',name:'Гречневая лапша с курицей и терияки «Из Лавки»',cat:'Готовые блюда',k:146,b:7.8,z:3.5,u:20.8},
+  {id:'bf068',name:'Индейка с гречкой и овощами «Из Лавки»',cat:'Готовые блюда',k:109,b:7.3,z:2.3,u:14.6},
+  {id:'bf069',name:'Фетучини с креветками в лимонном соусе «Летающая тарелка»',cat:'Готовые блюда',k:218.1,b:9.4,z:7.6,u:27.9},
+  {id:'bf070',name:'Рис с говядиной в устричном соусе Пибимпаб Lao Lee',cat:'Готовые блюда',k:145.8,b:6.7,z:5.4,u:17.6},
+  {id:'bf071',name:'Салат Филадельфия',cat:'Готовые блюда',k:276.4,b:8,z:8.4,u:42.2},
+  {id:'bf072',name:'Шаурма с говядиной и пепперони Shaurma and People',cat:'Готовые блюда',k:221.9,b:5.4,z:14.3,u:17.9},
+  // 🧴 Соусы и разное
+  {id:'bf073',name:'Соус Барбекю Heinz',cat:'Соусы',k:120,b:1,z:0.3,u:28},
+  {id:'bf074',name:'Соус Терияки Heinz',cat:'Соусы',k:160,b:1,z:0,u:38},
+  {id:'bf075',name:'Оливковое масло',cat:'Соусы',k:884,b:0,z:100,u:0},
+  {id:'bf076',name:'Мёд',cat:'Соусы',k:304,b:0.3,z:0,u:82.4},
+  {id:'bf077',name:'Арахисовая паста',cat:'Соусы',k:589,b:25,z:50,u:20},
+  // 🥜 Орехи и снеки
+  {id:'bf078',name:'Грецкий орех',cat:'Орехи',k:654,b:15.2,z:65.2,u:13.7},
+  {id:'bf079',name:'Миндаль',cat:'Орехи',k:579,b:21.2,z:49.9,u:21.6},
+  {id:'bf080',name:'Батончик Bombbar датский бисквит',cat:'Спортпит',k:309,b:33,z:8.5,u:8},
+  {id:'bf081',name:'Батончик Chikalab хрустящее печенье',cat:'Спортпит',k:326,b:30,z:12.6,u:5.9},
+  {id:'bf082',name:'Батончик Chikalab солёная карамель-арахис',cat:'Спортпит',k:333,b:30,z:14.1,u:3.8},
+  {id:'bf083',name:'Чипсы Lays бекон',cat:'Снеки',k:520,b:6,z:32,u:53},
+];
+
+// ── STORAGE ──────────────────────────────────────────
+function loadAll(){
+  // Food
+  try{ foodEntries=JSON.parse(localStorage.getItem('kbzhu_v1'))||{}; }catch(e){ foodEntries={}; }
+  try{ goals=JSON.parse(localStorage.getItem('kbzhu_goals_v1'))||{k:2500,b:180,z:70,u:250}; }catch(e){}
+  try{ savedFoods=JSON.parse(localStorage.getItem('kbzhu_foods_v1'))||[]; }catch(e){}
+  try{ dayNotes=JSON.parse(localStorage.getItem('kbzhu_notes_v1'))||{}; }catch(e){}
+  // Water — original keys
+  try{ waterEntries=JSON.parse(localStorage.getItem('hydro_entries'))||[]; }catch(e){ waterEntries=[]; }
+  try{ waterNorm=+localStorage.getItem('hydro_norm')||2000; }catch(e){}
+}
+function saveFoodEntries(){ localStorage.setItem('kbzhu_v1',JSON.stringify(foodEntries)); }
+function saveGoalsSt(){ localStorage.setItem('kbzhu_goals_v1',JSON.stringify(goals)); }
+function saveFoods(){ localStorage.setItem('kbzhu_foods_v1',JSON.stringify(savedFoods)); }
+function saveNotes(){ localStorage.setItem('kbzhu_notes_v1',JSON.stringify(dayNotes)); }
+function saveWaterEntries(){ localStorage.setItem('hydro_entries',JSON.stringify(waterEntries)); }
+function saveWaterNormSt(){ localStorage.setItem('hydro_norm',waterNorm); }
+
+// ── VIEWS ────────────────────────────────────────────
+let currentView = 'today';
+function showView(v, btn){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if(btn) btn.classList.add('active');
+  currentView = v;
+  document.getElementById('scroll-area').scrollTop = 0;
+  if(v==='today') renderToday();
+  if(v==='food') renderFood();
+  if(v==='water') renderWater();
+  if(v==='history') renderHCal();
+  if(v==='more') renderMore();
+}
+
+// ══════════════════════════════════════════════════════
+// TODAY
+// ══════════════════════════════════════════════════════
+function renderToday(){
+  updateDateLabels();
+  // Food KPIs
+  const fe = foodEntries[currentDate]||[];
+  const tot = calcFoodTotals(fe);
+  ['k','b','z','u'].forEach(m=>{
+    const v=Math.round(tot[m]);
+    const el=document.getElementById('t-'+m);
+    el.textContent=v;
+    const over=goals[m]&&v>goals[m];
+    el.closest('.kpi').classList.toggle('over',over);
+    const pct=goals[m]?Math.min(100,v/goals[m]*100):0;
+    document.getElementById('ts-'+m).style.width=pct+'%';
+    document.getElementById('t-'+m+'g').textContent='/ '+goals[m]+(m==='k'?' ккал':' г');
+  });
+  // Food progress bars
+  const labels={k:'Калории',b:'Белки',z:'Жиры',u:'Углеводы'};
+  const units={k:'ккал',b:'г',z:'г',u:'г'};
+  const colors={k:'pgk',b:'pgb',z:'pgz',u:'pgu'};
+  document.getElementById('food-progress-bars').innerHTML=['k','b','z','u'].map(m=>{
+    const v=Math.round(tot[m]);
+    const pct=goals[m]?Math.min(100,v/goals[m]*100):0;
+    const over=goals[m]&&v>goals[m];
+    return`<div class="pg-row"><div class="pg-meta"><span>${labels[m]}</span><span>${v} / ${goals[m]} ${units[m]}</span></div><div class="pg-track"><div class="pg-fill ${colors[m]}${over?' over':''}" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+  // Water
+  renderWaterProgress('today');
+  // Quick water
+  document.getElementById('today-quick-btns').innerHTML = QUICK_WATER.map(q=>{
+    const d=DRINKS[q.type];
+    return`<button class="qbtn" onclick="quickAddWater('${q.type}',${q.vol})"><span style="font-size:14px">${d.icon}</span><span><span style="font-weight:500">${q.label}</span><br><span class="qbtn-sub">${q.sub}</span></span></button>`;
+  }).join('');
+  // Streaks
+  document.getElementById('streak-food').textContent=calcFoodStreak();
+  document.getElementById('streak-water').textContent=calcWaterStreak();
+  // Note
+  document.getElementById('day-note').value=dayNotes[currentDate]||'';
+}
+
+function renderWaterProgress(context){
+  const hkey = hydKeyFromIso(currentDate);
+  const we = waterEntries.filter(e=>e.date===hkey);
+  const total = we.reduce((s,e)=>s+e.vol,0);
+  const hydro = Math.round(we.reduce((s,e)=>s+e.vol*e.coef,0));
+  const pct = waterNorm>0?Math.min(Math.round(hydro/waterNorm*100),150):0;
+  const left = Math.max(waterNorm-hydro,0);
+  if(context==='today'){
+    document.getElementById('tw-total').textContent=total;
+    document.getElementById('tw-hydro').textContent=hydro;
+    document.getElementById('tw-pct').textContent=Math.min(pct,100)+'%';
+    document.getElementById('tw-left').textContent=left>0?left:'0';
+    document.getElementById('tw-norm').textContent='/ '+waterNorm+' мл';
+    document.getElementById('tsw').style.width=Math.min(pct,100)+'%';
+    const bar=document.getElementById('pw-bar');
+    bar.style.width=Math.min(pct,100)+'%';
+    bar.className='pg-fill pgw'+(pct>=100?' over':'');
+    document.getElementById('tw-tip').innerHTML=waterTip(hydro,pct,left);
+  } else {
+    document.getElementById('wt').textContent=total;
+    document.getElementById('wh').textContent=hydro;
+    document.getElementById('wp').textContent=Math.min(pct,100)+'%';
+    document.getElementById('wl').textContent=left>0?left:'0';
+    const bar2=document.getElementById('wbar');
+    bar2.style.width=Math.min(pct,100)+'%';
+    bar2.className='pg-fill pgw'+(pct>=100?' over':'');
+    document.getElementById('wtip').innerHTML=waterTip(hydro,pct,left);
+  }
+}
+
+function waterTip(hydro,pct,left){
+  const isToday=currentDate===isoToday();
+  if(hydro===0&&isToday) return 'Начни день со стакана воды.';
+  if(hydro===0) return 'Записей за этот день нет.';
+  if(pct<40) return`<b>Не хватает ${left.toLocaleString('ru-RU')} мл</b> до нормы.`;
+  if(pct<70) return`Осталось добрать <b>${left.toLocaleString('ru-RU')} мл</b>.`;
+  if(pct<100) return`Почти норма! Ещё <b>${left.toLocaleString('ru-RU')} мл</b>.`;
+  return'<b>Норма выполнена!</b> 🎯';
+}
+
+function saveNote(){
+  dayNotes[currentDate]=document.getElementById('day-note').value;
+  saveNotes();
+}
+
+// ══════════════════════════════════════════════════════
+// FOOD VIEW
+// ══════════════════════════════════════════════════════
+function renderFood(){
+  updateDateLabels();
+  const fe = foodEntries[currentDate]||[];
+  const tot = calcFoodTotals(fe);
+  // Donut
+  renderFoodDonut(tot);
+  // Meals
+  const cont = document.getElementById('meals-container');
+  cont.innerHTML='';
+  MEAL_ORDER.forEach(mt=>{
+    const me=fe.filter(e=>e.meal===mt);
+    const mt2=calcFoodTotals(me);
+    const info=MEAL_META[mt];
+    const div=document.createElement('div');
+    div.className='meal-block';
+    const open=me.length>0;
+    div.innerHTML=`
+      <div class="meal-head" onclick="toggleMealBlock(this)">
+        <div class="meal-head-l">
+          <span class="meal-icon">${info.icon}</span>
+          <span class="meal-name-t">${info.label}</span>
+          ${me.length?`<span class="meal-kcal-t">${Math.round(mt2.k)} ккал</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${me.length?`<span class="meal-macro-t">Б${Math.round(mt2.b)} Ж${Math.round(mt2.z)} У${Math.round(mt2.u)}</span>`:''}
+          <span class="meal-arr ${open?'open':''}">▾</span>
+        </div>
+      </div>
+      <div class="meal-items ${open?'open':''}">
+        ${!me.length?'<div class="empty" style="padding:10px">Пусто</div>':''}
+        ${me.map(e=>`<div class="meal-item">
+          <span class="mi-name">${e.name}${e.weight?' ('+e.weight+'г)':''}</span>
+          <span class="mi-macros"><span style="color:var(--blue)">${Math.round(e.k)}</span><span style="color:var(--text3)">·</span><span style="color:var(--teal)">Б${Math.round(e.b)}</span><span style="color:var(--text3)">·</span><span style="color:var(--amber)">Ж${Math.round(e.z)}</span><span style="color:var(--text3)">·</span><span style="color:var(--purple)">У${Math.round(e.u)}</span></span>
+          <button class="mi-del" style="color:var(--blue)" onclick="editFoodEntry('${e.id}')" title="Редактировать">✎</button>
+          <button class="mi-del" onclick="deleteFoodEntry('${e.id}')">✕</button>
+        </div>`).join('')}
+        <div class="meal-add-row"><button class="meal-add-btn" onclick="openFoodModal('${mt}')">+ Добавить</button></div>
+      </div>`;
+    cont.appendChild(div);
+  });
+}
+
+function renderFoodDonut(tot){
+  const total=tot.b+tot.z+tot.u||1;
+  const segments=[
+    {label:'Белки',val:tot.b,color:'var(--teal)'},
+    {label:'Жиры',val:tot.z,color:'var(--amber)'},
+    {label:'Углеводы',val:tot.u,color:'var(--purple)'},
+  ];
+  const svg=document.getElementById('food-donut');
+  const cx=45,cy=45,r=34,sw=14,circ=2*Math.PI*r;
+  let off=0;
+  const segs=segments.map(s=>{
+    const pct=s.val/total;
+    const seg={...s,pct,dash:pct*circ,offset:off};
+    off+=pct*circ; return seg;
+  });
+  if(tot.b+tot.z+tot.u===0){
+    svg.innerHTML=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg4)" stroke-width="${sw}"/>`;
+  } else {
+    svg.innerHTML=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg3)" stroke-width="${sw}"/>`+
+      segs.map(s=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${s.dash} ${circ}" stroke-dashoffset="${-s.offset}" transform="rotate(-90 ${cx} ${cy})"/>`).join('');
+  }
+  document.getElementById('food-donut-legend').innerHTML=segments.map(s=>{
+    const pct=total>1?Math.round(s.val/total*100):0;
+    return`<div class="donut-row"><span class="donut-dot" style="background:${s.color}"></span><span class="ds-label">${s.label}</span><span class="ds-val">${Math.round(s.val)}г <span style="color:var(--text3)">${pct}%</span></span></div>`;
+  }).join('');
+}
+
+function toggleMealBlock(head){
+  const arr=head.querySelector('.meal-arr');
+  const items=head.nextElementSibling;
+  const open=items.classList.toggle('open');
+  arr.classList.toggle('open',open);
+}
+
+function calcFoodTotals(entries){
+  return entries.reduce((a,e)=>({k:a.k+e.k,b:a.b+e.b,z:a.z+e.z,u:a.u+e.u}),{k:0,b:0,z:0,u:0});
+}
+
+// ── FOOD MODAL ───────────────────────────────────────
+let editingEntryId = null;
+
+function openFoodModal(mealType, entryToEdit){
+  editingEntryId = entryToEdit ? entryToEdit.id : null;
+  addingMealType = mealType;
+  document.getElementById('modal-food-title').textContent = editingEntryId ? 'Редактировать' : 'Добавить';
+  document.getElementById('modal-food-btn').textContent = editingEntryId ? 'Сохранить' : 'Добавить';
+  document.getElementById('modal-food-save-btn').style.display = editingEntryId ? 'none' : '';
+  if(entryToEdit){
+    document.getElementById('add-meal-type').value=entryToEdit.meal;
+    document.getElementById('add-name').value=entryToEdit.name;
+    document.getElementById('add-k').value=entryToEdit.k;
+    document.getElementById('add-b').value=entryToEdit.b;
+    document.getElementById('add-z').value=entryToEdit.z;
+    document.getElementById('add-u').value=entryToEdit.u;
+    document.getElementById('add-weight').value=entryToEdit.weight||''
+    document.getElementById('add-k100').value=entryToEdit.k100||entryToEdit.k;
+    document.getElementById('add-b100').value=entryToEdit.b100||entryToEdit.b;
+    document.getElementById('add-z100').value=entryToEdit.z100||entryToEdit.z;
+    document.getElementById('add-u100b').value=entryToEdit.u100||entryToEdit.u;
+    document.getElementById('weight-hint').textContent=entryToEdit.weight ? '(×'+entryToEdit.weight+'г)' : '';
+  } else {
+    if(mealType) document.getElementById('add-meal-type').value=mealType;
+    ['add-name','add-k','add-b','add-z','add-u','add-weight','add-k100','add-b100','add-z100','add-u100b'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('weight-hint').textContent='';
+    selectedSavedFoodId=null;
+  }
+  document.getElementById('sf-search').value='';
+  renderSFSearch();
+  document.getElementById('modal-food').classList.add('open');
+  setTimeout(()=>document.getElementById(editingEntryId?'add-weight':'sf-search').focus(),150);
+}
+
+function calcFromWeight(){
+  const w=parseFloat(document.getElementById('add-weight').value);
+  if(!w) return;
+  const k100=parseFloat(document.getElementById('add-k100').value)||0;
+  const b100=parseFloat(document.getElementById('add-b100').value)||0;
+  const z100=parseFloat(document.getElementById('add-z100').value)||0;
+  const u100=parseFloat(document.getElementById('add-u100b').value)||0;
+  if(k100||b100||z100||u100){
+    document.getElementById('add-k').value=Math.round(k100*w/100);
+    document.getElementById('add-b').value=Math.round(b100*w/100*10)/10;
+    document.getElementById('add-z').value=Math.round(z100*w/100*10)/10;
+    document.getElementById('add-u').value=Math.round(u100*w/100*10)/10;
+    document.getElementById('weight-hint').textContent='→ пересчитано';
+  }
+}
+
+function getFoodFormData(){
+  return {
+    meal: document.getElementById('add-meal-type').value,
+    name: document.getElementById('add-name').value.trim(),
+    k: parseFloat(document.getElementById('add-k').value)||0,
+    b: parseFloat(document.getElementById('add-b').value)||0,
+    z: parseFloat(document.getElementById('add-z').value)||0,
+    u: parseFloat(document.getElementById('add-u').value)||0,
+    weight: parseFloat(document.getElementById('add-weight').value)||null,
+  };
+}
+
+function submitFoodEntry(saveToBase){
+  const data=getFoodFormData();
+  if(!data.name){ document.getElementById('add-name').focus(); return; }
+  if(!foodEntries[currentDate]) foodEntries[currentDate]=[];
+  if(editingEntryId){
+    // Edit existing
+    const arr=foodEntries[currentDate];
+    const idx=arr.findIndex(e=>e.id===editingEntryId);
+    if(idx>-1) arr[idx]={...arr[idx],...data};
+    editingEntryId=null;
+  } else {
+    // Add new
+    const k100=parseFloat(document.getElementById('add-k100').value)||null;
+    const b100=parseFloat(document.getElementById('add-b100').value)||null;
+    const z100=parseFloat(document.getElementById('add-z100').value)||null;
+    const u100=parseFloat(document.getElementById('add-u100b').value)||null;
+    foodEntries[currentDate].push({id:Date.now().toString(36)+Math.random().toString(36).slice(2),...data,k100,b100,z100,u100,ts:Date.now()});
+    if(saveToBase && !savedFoods.find(f=>f.name.toLowerCase()===data.name.toLowerCase())){
+      savedFoods.push({id:Date.now().toString(36),name:data.name,k:data.k,b:data.b,z:data.z,u:data.u});
+      saveFoods();
+    }
+  }
+  haptic();
+  saveFoodEntries();
+  closeModal('modal-food');
+  renderFood();
+  if(currentView==='today') renderToday();
+}
+
+// Keep old name as alias for copy-yesterday etc
+function addFoodEntry(saveToBase){ submitFoodEntry(saveToBase); }
+
+function deleteFoodEntry(id){
+  const arr=foodEntries[currentDate];
+  if(!arr) return;
+  const i=arr.findIndex(e=>e.id===id);
+  if(i>-1) arr.splice(i,1);
+  saveFoodEntries();
+  renderFood();
+  if(currentView==='today') renderToday();
+}
+
+function editFoodEntry(id){
+  const arr=foodEntries[currentDate]||[];
+  const entry=arr.find(e=>e.id===id);
+  if(!entry) return;
+  openFoodModal(entry.meal, entry);
+}
+
+function copyYesterday(){
+  const yd=new Date(); yd.setDate(yd.getDate()-1);
+  const ydIso=isoDate(yd);
+  const src=foodEntries[ydIso];
+  if(!src||!src.length){ showToast('Вчера нет данных'); return; }
+  if(!foodEntries[currentDate]) foodEntries[currentDate]=[];
+  src.forEach(e=>{
+    foodEntries[currentDate].push({...e,id:Date.now().toString(36)+Math.random().toString(36).slice(2),ts:Date.now()});
+  });
+  saveFoodEntries();
+  renderFood();
+  if(currentView==='today') renderToday();
+  showToast('Скопировано ✓');
+}
+
+// ── SAVED FOODS ──────────────────────────────────────
+function renderSFSearch(){
+  const q=document.getElementById('sf-search').value.toLowerCase();
+  const el=document.getElementById('sf-search-results');
+  if(!q){ el.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:3px 0">Начни вводить название...</div>`; return; }
+  // Search in user's saved foods first, then built-in database
+  const userRes=savedFoods.filter(f=>f.name.toLowerCase().includes(q));
+  const builtinRes=BUILTIN_FOODS.filter(f=>f.name.toLowerCase().includes(q) && !userRes.find(u=>u.name===f.name));
+  const res=[...userRes,...builtinRes].slice(0,10);
+  if(!res.length){ el.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:3px 0">Нет совпадений</div>`; return; }
+  el.innerHTML=res.map(f=>{
+    const isUser=!!savedFoods.find(u=>u.id===f.id);
+    const badge=isUser?`<span style="font-size:9px;color:var(--green);margin-left:4px">★</span>`:`<span style="font-size:9px;color:var(--text3);margin-left:4px">база</span>`;
+    return`<div class="sf-item" onclick="fillFromSaved(${JSON.stringify(f).replace(/"/g,'&quot;')})"><span class="sf-name">${f.name}${badge}</span><span class="sf-mac">${f.k} / Б${f.b} / Ж${f.z} / У${f.u}</span></div>`;
+  }).join('');
+}
+
+let selectedSavedFoodId = null;
+
+function fillFromSaved(food){
+  selectedSavedFoodId = food.id || null;
+  document.getElementById('add-name').value=food.name;
+  document.getElementById('add-k100').value=food.k;
+  document.getElementById('add-b100').value=food.b;
+  document.getElementById('add-z100').value=food.z;
+  document.getElementById('add-u100b').value=food.u;
+  document.getElementById('add-weight').value=100;
+  calcFromWeight();
+  document.getElementById('add-weight').select();
+  // Hide "save to base" — already in base
+  document.getElementById('modal-food-save-btn').style.display='none';
+}
+
+function onFoodNameInput(){
+  // If user edits the name manually — show save button again
+  const name = document.getElementById('add-name').value.trim();
+  const inBase = savedFoods.find(f=>f.name.toLowerCase()===name.toLowerCase());
+  document.getElementById('modal-food-save-btn').style.display = inBase ? 'none' : '';
+  if(!inBase) selectedSavedFoodId = null;
+}
+
+// ══════════════════════════════════════════════════════
+// WATER VIEW
+// ══════════════════════════════════════════════════════
+function renderWater(){
+  updateDateLabels();
+  document.getElementById('water-norm-input').value=waterNorm;
+  renderWaterProgress('water');
+  renderWaterLog();
+  renderWaterBreakdown();
+  document.getElementById('wstreak-big').textContent=calcWaterStreak();
+  document.getElementById('wdate-lbl').textContent=fmtLabel(currentDate);
+  document.getElementById('water-quick-btns').innerHTML=QUICK_WATER.map(q=>{
+    const d=DRINKS[q.type];
+    return`<button class="qbtn" onclick="quickAddWater('${q.type}',${q.vol})"><span style="font-size:14px">${d.icon}</span><span><span style="font-weight:500">${q.label}</span><br><span class="qbtn-sub">${q.sub}</span></span></button>`;
+  }).join('');
+}
+
+function saveWaterNorm(){
+  waterNorm=+document.getElementById('water-norm-input').value||2000;
+  saveWaterNormSt();
+  renderWaterProgress('water');
+  if(currentView==='today') renderToday();
+}
+
+function onWTypeChange(){
+  const t=document.getElementById('w-type').value.split('|')[0];
+  document.getElementById('w-vol').value={water:250,tea:250,energy:330,protein:300,proteinwater:300,other:250}[t]||250;
+  document.getElementById('w-custom-row').style.display=t==='other'?'block':'none';
+}
+
+// Protein КБЖУ per 100ml — used for auto-adding to food log
+const PROTEIN_KBZU = {
+  protein:     {k:65, b:6.0, z:2.0, u:5.0, name:'Протеин (молоко)'},
+  proteinwater:{k:50, b:7.0, z:1.0, u:3.0, name:'Протеин (вода)'},
+};
+
+function autoAddProteinToFood(type, vol){
+  const p = PROTEIN_KBZU[type];
+  if(!p) return;
+  if(!foodEntries[currentDate]) foodEntries[currentDate]=[];
+  // Avoid duplicate if already added same protein+vol in last 10 seconds
+  const now=Date.now();
+  const dupe=foodEntries[currentDate].find(e=>e.name===p.name&&e.weight===vol&&now-e.ts<10000);
+  if(dupe) return;
+  const factor=vol/100;
+  foodEntries[currentDate].push({
+    id:now.toString(36)+'p',
+    meal:'snack',
+    name:p.name,
+    k:Math.round(p.k*factor),
+    b:Math.round(p.b*factor*10)/10,
+    z:Math.round(p.z*factor*10)/10,
+    u:Math.round(p.u*factor*10)/10,
+    weight:vol,
+    k100:p.k, b100:p.b, z100:p.z, u100:p.u,
+    ts:now,
+    fromWater:true
+  });
+  saveFoodEntries();
+  showToast('🥛 Протеин добавлен в питание (перекус)');
+}
+
+function addWaterEntry(){
+  const tv=document.getElementById('w-type').value.split('|');
+  const vol=+document.getElementById('w-vol').value;
+  if(!vol||vol<10) return;
+  const type=tv[0];
+  const customName=type==='other'?(document.getElementById('w-custom').value.trim()||'Другой'):'';
+  waterEntries.push({id:Date.now(),date:hydKeyFromIso(currentDate),type,vol,coef:+tv[1],customName});
+  if(type==='other') document.getElementById('w-custom').value='';
+  if(type==='protein'||type==='proteinwater') autoAddProteinToFood(type, vol);
+  saveWaterEntries();
+  renderWaterProgress('water');
+  renderWaterLog();
+  if(currentView==='today') renderToday();
+}
+
+function quickAddWater(type,vol){
+  waterEntries.push({id:Date.now(),date:hydKeyFromIso(currentDate),type,vol,coef:DRINKS[type].coef});
+  if(type==='protein'||type==='proteinwater') autoAddProteinToFood(type, vol);
+  saveWaterEntries();
+  haptic();
+  renderWaterProgress(currentView==='water'?'water':'today');
+  if(currentView==='water') renderWaterLog();
+  if(currentView==='today') renderToday();
+}
+
+function deleteWaterEntry(id){
+  waterEntries=waterEntries.filter(e=>e.id!==id);
+  saveWaterEntries();
+  renderWaterProgress('water');
+  renderWaterLog();
+  if(currentView==='today') renderToday();
+}
+
+function renderWaterLog(){
+  const hkey=hydKeyFromIso(currentDate);
+  const day=waterEntries.filter(e=>e.date===hkey);
+  const tb=document.getElementById('wlog');
+  if(!day.length){ tb.innerHTML='<tr><td colspan="5" style="color:var(--text3);text-align:center;padding:12px">Нет записей</td></tr>'; return; }
+  tb.innerHTML=[...day].sort((a,b)=>b.id-a.id).map(e=>{
+    const d=DRINKS[e.type]||DRINKS.other;
+    const eff=Math.round(e.vol*e.coef);
+    const label=e.type==='other'&&e.customName?e.customName:d.label;
+    const ts=new Date(e.id);const timeStr=ts.getFullYear()>2000?ts.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}):'—';
+    return`<tr><td><span class="badge ${d.badge}">${label}</span></td><td>${e.vol} мл</td><td style="color:var(--text3);font-size:12px">${timeStr}</td><td><b>${eff}</b> мл</td><td><button class="btn-del" style="border:none;background:none;color:var(--text3);cursor:pointer;padding:2px 5px" onclick="deleteWaterEntry(${e.id})">✕</button></td></tr>`;
+  }).join('');
+}
+
+function setWaterPeriod(p,btn){
+  waterBreakPeriod=p;
+  document.querySelectorAll('#view-water .tab-row:last-of-type .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const labels={'7d':'за 7 дней','30d':'за 30 дней','3m':'за 3 месяца'};
+  document.getElementById('wbreakdown-lbl').textContent=labels[p]||'';
+  renderWaterBreakdown();
+}
+
+function renderWaterBreakdown(){
+  const today=new Date(); let keys=[];
+  const n=waterBreakPeriod==='7d'?7:waterBreakPeriod==='30d'?30:90;
+  for(let i=n-1;i>=0;i--){ const d=new Date(today);d.setDate(d.getDate()-i);keys.push(hydDateKey(d)); }
+  const filtered=keys?waterEntries.filter(e=>keys.includes(e.date)):waterEntries;
+  const totals={};
+  filtered.forEach(e=>{ if(!totals[e.type])totals[e.type]=0;totals[e.type]+=e.vol; });
+  const grand=Object.values(totals).reduce((s,v)=>s+v,0)||1;
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const svg=document.getElementById('wdonut');
+  const cx=45,cy=45,r=34,sw=14,circ=2*Math.PI*r;
+  let off=0;
+  const segs=sorted.map(([type,vol])=>{
+    const d=DRINKS[type]||DRINKS.other;
+    const pct=vol/grand;
+    const seg={type,vol,pct,color:d.color,dash:pct*circ,offset:off};
+    off+=pct*circ; return seg;
+  });
+  if(!segs.length){ svg.innerHTML=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg4)" stroke-width="${sw}"/>`; }
+  else { svg.innerHTML=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg3)" stroke-width="${sw}"/>`+segs.map(s=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${s.dash} ${circ}" stroke-dashoffset="${-s.offset}" transform="rotate(-90 ${cx} ${cy})"/>`).join(''); }
+  document.getElementById('wdonut-legend').innerHTML=sorted.length?sorted.map(([type,vol])=>{
+    const d=DRINKS[type]||DRINKS.other;const pct=Math.round(vol/grand*100);
+    return`<div class="donut-row"><span class="donut-dot" style="background:${d.color}"></span><span class="ds-label">${d.label}</span><span class="ds-val">${pct}% <span style="color:var(--text3)">(${vol}мл)</span></span></div>`;
+  }).join(''):'<span style="font-size:12px;color:var(--text3)">Данных нет</span>';
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────
+function toggleNotif(){
+  const on=document.getElementById('notif-toggle').checked;
+  document.getElementById('notif-interval-row').style.display=on?'block':'none';
+  if(on){
+    if(Notification.permission==='default'){
+      Notification.requestPermission().then(p=>{
+        if(p==='granted') startNotifTimer();
+        else{ document.getElementById('notif-toggle').checked=false;document.getElementById('notif-interval-row').style.display='none'; }
+      });
+    } else if(Notification.permission==='granted') startNotifTimer();
+    else{ document.getElementById('notif-toggle').checked=false;showToast('Разрешите уведомления в настройках'); }
+  } else { clearInterval(notifTimer);notifTimer=null; }
+  saveNotifSettings();updateNotifStatus();
+}
+function startNotifTimer(){
+  clearInterval(notifTimer);
+  const h=+document.getElementById('notif-interval').value||2;
+  notifTimer=setInterval(()=>{
+    const key=todayHydKey();
+    const hydro=Math.round(waterEntries.filter(e=>e.date===key).reduce((s,e)=>s+e.vol*e.coef,0));
+    const left=Math.max(waterNorm-hydro,0);
+    if(left>0) new Notification('💧 Время выпить воды',{body:`Осталось ${left} мл до нормы`});
+  },h*3600*1000);
+}
+function saveNotifSettings(){
+  const on=document.getElementById('notif-toggle').checked;
+  const h=document.getElementById('notif-interval').value;
+  localStorage.setItem('hydro_notif',JSON.stringify({on,h}));
+  updateNotifStatus();
+  if(on&&Notification.permission==='granted') startNotifTimer();
+}
+function updateNotifStatus(){
+  const on=document.getElementById('notif-toggle').checked;
+  const h=document.getElementById('notif-interval').value;
+  document.getElementById('notif-status').textContent=on?`каждые ${h} ч`:'выключены';
+}
+function restoreNotif(){
+  const s=JSON.parse(localStorage.getItem('hydro_notif')||'{}');
+  if(s.on&&Notification.permission==='granted'){
+    document.getElementById('notif-toggle').checked=true;
+    document.getElementById('notif-interval').value=s.h||2;
+    document.getElementById('notif-interval-row').style.display='block';
+    startNotifTimer();updateNotifStatus();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════════════
+function renderHCal(){
+  const now=new Date();
+  if(hcalYear===undefined){ hcalYear=now.getFullYear();hcalMonth=now.getMonth(); }
+  document.getElementById('hcal-month').textContent=MONTHS[hcalMonth]+' '+hcalYear;
+  const first=new Date(hcalYear,hcalMonth,1);
+  let dow=first.getDay();if(dow===0)dow=7;
+  const dim=new Date(hcalYear,hcalMonth+1,0).getDate();
+  const prev=new Date(hcalYear,hcalMonth,0).getDate();
+  const today=isoToday();
+  let html='';
+  for(let i=dow-1;i>0;i--) html+=`<div class="cal-d other">${prev-i+1}</div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=hcalYear+'-'+String(hcalMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const fe=foodEntries[ds]||[];const tot=calcFoodTotals(fe);
+    const hasFood=fe.length>0;
+    const foodMet=hasFood&&goals.k&&tot.k>=goals.k*0.85&&tot.k<=goals.k*1.15;
+    const hkey=hydKeyFromIso(ds);
+    const hhydro=Math.round(waterEntries.filter(e=>e.date===hkey).reduce((s,e)=>s+e.vol*e.coef,0));
+    const hasWater=hhydro>0;
+    let cls='cal-d';
+    if(ds===today)cls+=' today';
+    if(hasFood)cls+=foodMet?' has-k':' partial-k';
+    if(hasWater)cls+=' has-w';
+    html+=`<div class="${cls}" onclick="histSelectDay('${ds}')">${d}</div>`;
+  }
+  const tail=(dow-1+dim)%7;const rem=tail?7-tail:0;
+  for(let d=1;d<=rem;d++) html+=`<div class="cal-d other">${d}</div>`;
+  document.getElementById('hcal-days').innerHTML=html;
+}
+function hcalPrev(){ hcalMonth--;if(hcalMonth<0){hcalMonth=11;hcalYear--;}renderHCal(); }
+function hcalNext(){ hcalMonth++;if(hcalMonth>11){hcalMonth=0;hcalYear++;}renderHCal(); }
+
+function histSelectDay(ds){
+  const el=document.getElementById('hist-detail');
+  const fe=foodEntries[ds]||[];
+  const tot=calcFoodTotals(fe);
+  const hkey=hydKeyFromIso(ds);
+  const we=waterEntries.filter(e=>e.date===hkey);
+  const hydro=Math.round(we.reduce((s,e)=>s+e.vol*e.coef,0));
+  const note=dayNotes[ds];
+  let mealsHtml=MEAL_ORDER.map(mt=>{
+    const me=fe.filter(e=>e.meal===mt);if(!me.length) return'';
+    const info=MEAL_META[mt];
+    return`<div style="margin-bottom:8px"><div style="font-size:12px;color:var(--text2);margin-bottom:3px">${info.icon} ${info.label}</div>${me.map(e=>`<div class="sr"><span class="sr-k">${e.name}${e.weight?' ('+e.weight+'г)':''}</span><span class="sr-v" style="font-size:11px;color:var(--text3)">${Math.round(e.k)} / Б${Math.round(e.b)} / Ж${Math.round(e.z)} / У${Math.round(e.u)}</span></div>`).join('')}</div>`;
+  }).join('');
+  el.innerHTML=`<div class="card">
+    <div class="card-title">${fmtLabel(ds)}</div>
+    ${note?`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;padding:6px 8px;background:var(--bg3);border-radius:8px;font-style:italic">${note}</div>`:''}
+    ${fe.length?mealsHtml:'<div class="empty" style="padding:8px">Нет данных по питанию</div>'}
+    ${fe.length?`<div class="sep"></div>
+    <div class="sr"><span class="sr-k" style="font-weight:500">КБЖУ итого</span><span class="sr-v">${Math.round(tot.k)} ккал</span></div>
+    <div class="sr"><span class="sr-k">Белки</span><span class="sr-v" style="color:var(--teal)">${Math.round(tot.b)}г</span></div>
+    <div class="sr"><span class="sr-k">Жиры</span><span class="sr-v" style="color:var(--amber)">${Math.round(tot.z)}г</span></div>
+    <div class="sr"><span class="sr-k">Углеводы</span><span class="sr-v" style="color:var(--purple)">${Math.round(tot.u)}г</span></div>`:''}
+    ${hydro>0?`<div class="sep"></div><div class="sr"><span class="sr-k">💧 Гидратация</span><span class="sr-v" style="color:var(--cyan)">${hydro} мл</span></div>`:''}
+    <div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="currentDate='${ds}';showView('food',document.querySelectorAll('.bnav-btn')[1])">Редактировать питание</button></div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// STATS & MORE
+// ══════════════════════════════════════════════════════
+function renderMore(){
+  renderFoodStats();
+  renderWaterStats();
+  renderWeeklySummary();
+  applyReminderSettingsToUI();
+  // Goals
+  document.getElementById('goal-k').value=goals.k;
+  document.getElementById('goal-b').value=goals.b;
+  document.getElementById('goal-z').value=goals.z;
+  document.getElementById('goal-u').value=goals.u;
+  renderSFSettings();
+}
+
+
+
+function setStatPeriod(p,btn){
+  statPeriod=p;
+  document.querySelectorAll('#view-more .tab-row:first-of-type .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderFoodStats();
+}
+function setStatMetric(m,btn){
+  statMetric=m;
+  ['k','b','z','u'].forEach(mm=>{ const el=document.getElementById('sm-'+mm);
+    el.style.borderColor=''; el.style.color=''; });
+  const colors={k:'var(--blue)',b:'var(--teal)',z:'var(--amber)',u:'var(--purple)'};
+  btn.style.borderColor=colors[m]; btn.style.color=colors[m];
+  renderFoodStats();
+}
+
+function renderFoodStats(){
+  const days=getPastDays(statPeriod);
+  const hasDays=days.filter(d=>(foodEntries[d]||[]).length>0);
+  const totals=hasDays.map(d=>calcFoodTotals(foodEntries[d]||[]));
+  const avg=key=>hasDays.length?Math.round(totals.reduce((a,t)=>a+t[key],0)/hasDays.length):0;
+  ['k','b','z','u'].forEach(m=>{ document.getElementById('avg-'+m).textContent=avg(m)||'—'; });
+  // Chart
+  const mc={k:'var(--blue)',b:'var(--teal)',z:'var(--amber)',u:'var(--purple)'};
+  const displayDays=statPeriod<=30?days:getPastDays(statPeriod).filter((_,i)=>i%Math.ceil(statPeriod/30)===0);
+  const vals=displayDays.map(d=>{
+    const e=foodEntries[d]||[];
+    return e.length?Math.round(calcFoodTotals(e)[statMetric]):0;
+  });
+  const maxV=Math.max(...vals,1);
+  const gv=goals[statMetric];
+  document.getElementById('food-chart').innerHTML=displayDays.map((d,i)=>{
+    const v=vals[i];const h=Math.round(v/maxV*84);
+    const lbl=statPeriod<=7?parseIso(d).toLocaleDateString('ru',{weekday:'short'}).slice(0,2):
+               statPeriod<=30?parseIso(d).getDate():
+               parseIso(d).toLocaleDateString('ru',{month:'short'});
+    return`<div class="bc"><div class="bv">${v||''}</div><div class="bb" style="height:${h}px;background:${gv&&v>gv?'var(--red)':mc[statMetric]}"></div><div class="bl">${lbl}</div></div>`;
+  }).join('');
+}
+
+function setWaterStatPeriod(p,btn){
+  waterChartPeriod=p;
+  document.querySelectorAll('#view-more .tab-row:nth-of-type(2) .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderWaterStats();
+}
+
+function renderWaterStats(){
+  const today=new Date();const n=waterChartPeriod==='7d'?7:waterChartPeriod==='30d'?30:90;
+  const items=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date(today);d.setDate(d.getDate()-i);items.push({key:hydDateKey(d),iso:isoDate(d),label:n<=7?['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][(d.getDay()+6)%7]:n<=30?d.getDate():d.toLocaleDateString('ru',{month:'short'})}); }
+  const vals=items.map(it=>Math.round(waterEntries.filter(e=>e.date===it.key).reduce((s,e)=>s+e.vol*e.coef,0)));
+  const maxV=Math.max(...vals,waterNorm,1);
+  document.getElementById('water-chart').innerHTML=items.map((it,i)=>{
+    const v=vals[i];const h=Math.round(v/maxV*84);
+    const color=v>=waterNorm?'var(--green)':v>0?'var(--cyan)':'var(--bg4)';
+    return`<div class="bc"><div class="bv">${v?Math.round(v/1000*10)/10+'л':''}</div><div class="bb" style="height:${Math.max(h,2)}px;background:${color}"></div><div class="bl">${it.label}</div></div>`;
+  }).join('');
+  const nonZ=vals.filter(v=>v>0);
+  const avg2=nonZ.length?Math.round(nonZ.reduce((s,v)=>s+v,0)/nonZ.length):0;
+  const good=vals.filter(v=>v>=waterNorm).length;
+  document.getElementById('wstat-summary').innerHTML=nonZ.length
+    ?`Среднее: <b>${(avg2/1000).toFixed(1)} л/день</b><br>Норма выполнена: <b>${good} из ${n} дней</b>`
+    :'<span style="color:var(--text3)">Данных нет</span>';
+}
+
+function saveGoals(){
+  goals.k=parseFloat(document.getElementById('goal-k').value)||2500;
+  goals.b=parseFloat(document.getElementById('goal-b').value)||180;
+  goals.z=parseFloat(document.getElementById('goal-z').value)||70;
+  goals.u=parseFloat(document.getElementById('goal-u').value)||250;
+  saveGoalsSt();
+  showToast('Цели сохранены ✓');
+  if(currentView==='today') renderToday();
+}
+
+function renderSFSettings(){
+  document.getElementById('sf-count').textContent=savedFoods.length;
+  const el=document.getElementById('sf-list-settings');
+  const empty=document.getElementById('sf-empty-s');
+  if(!savedFoods.length){ el.innerHTML='';empty.style.display='block';return; }
+  empty.style.display='none';
+  el.innerHTML=savedFoods.map(f=>`
+    <div style="background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:5px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span class="sf-name" style="flex:1;font-size:13px">${f.name}</span>
+        <button class="sf-del-btn" onclick="deleteSF('${f.id}')">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ккал</div><input type="number" value="${f.k}" style="font-size:12px;padding:4px 6px;width:100%;background:var(--bg4);border:0.5px solid var(--border2);border-radius:6px;color:var(--text)" onchange="updateSF('${f.id}','k',this.value)"></div>
+        <div><div style="font-size:10px;color:var(--teal);margin-bottom:2px">Белки</div><input type="number" value="${f.b}" style="font-size:12px;padding:4px 6px;width:100%;background:var(--bg4);border:0.5px solid var(--border2);border-radius:6px;color:var(--text)" onchange="updateSF('${f.id}','b',this.value)"></div>
+        <div><div style="font-size:10px;color:var(--amber);margin-bottom:2px">Жиры</div><input type="number" value="${f.z}" style="font-size:12px;padding:4px 6px;width:100%;background:var(--bg4);border:0.5px solid var(--border2);border-radius:6px;color:var(--text)" onchange="updateSF('${f.id}','z',this.value)"></div>
+        <div><div style="font-size:10px;color:var(--purple);margin-bottom:2px">Углев.</div><input type="number" value="${f.u}" style="font-size:12px;padding:4px 6px;width:100%;background:var(--bg4);border:0.5px solid var(--border2);border-radius:6px;color:var(--text)" onchange="updateSF('${f.id}','u',this.value)"></div>
+      </div>
+    </div>`).join('');
+}
+function deleteSF(id){ savedFoods=savedFoods.filter(f=>f.id!==id);saveFoods();renderSFSettings(); }
+
+function updateSF(id, field, value){
+  const food=savedFoods.find(f=>f.id===id);
+  if(!food) return;
+  food[field]=parseFloat(value)||0;
+  saveFoods();
+  showToast('Сохранено ✓');
+}
+
+// ══════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════════════════
+function exportAll(){
+  const data={
+    version:2,
+    exportedAt:new Date().toISOString(),
+    foodEntries,goals,savedFoods,dayNotes,
+    waterEntries,waterNorm
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`health_tracker_${isoToday()}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+function triggerImport(){ document.getElementById('import-file').click(); }
+function handleImport(event){
+  const file=event.target.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      // Food
+      if(d.foodEntries) foodEntries={...foodEntries,...d.foodEntries};
+      if(d.goals) goals=d.goals;
+      if(d.savedFoods) savedFoods=[...savedFoods,...d.savedFoods.filter(f=>!savedFoods.find(sf=>sf.name===f.name))];
+      if(d.dayNotes) dayNotes={...dayNotes,...d.dayNotes};
+      // Water — also handle old hydration-only exports
+      const we=d.waterEntries||(Array.isArray(d.entries)?d.entries:null);
+      if(we){
+        const existing=new Set(waterEntries.map(e=>e.id));
+        waterEntries=[...waterEntries,...we.filter(e=>!existing.has(e.id))];
+      }
+      if(d.waterNorm||d.norm) waterNorm=d.waterNorm||d.norm;
+      saveFoodEntries();saveGoalsSt();saveFoods();saveNotes();saveWaterEntries();saveWaterNormSt();
+      renderToday();showToast('Импортировано ✓');
+    }catch(e){ showToast('Ошибка формата файла'); }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// ══════════════════════════════════════════════════════
+// DAY PICKER MODAL
+// ══════════════════════════════════════════════════════
+function openDayPicker(){
+  const d=parseIso(currentDate);
+  pickerYear=d.getFullYear();pickerMonth=d.getMonth();
+  renderPicker();
+  document.getElementById('modal-picker').classList.add('open');
+}
+function pickerPrev(){ pickerMonth--;if(pickerMonth<0){pickerMonth=11;pickerYear--;}renderPicker(); }
+function pickerNext(){ pickerMonth++;if(pickerMonth>11){pickerMonth=0;pickerYear++;}renderPicker(); }
+function renderPicker(){
+  document.getElementById('picker-month').textContent=MONTHS[pickerMonth]+' '+pickerYear;
+  const first=new Date(pickerYear,pickerMonth,1);
+  let dow=first.getDay();if(dow===0)dow=7;
+  const dim=new Date(pickerYear,pickerMonth+1,0).getDate();
+  const prev=new Date(pickerYear,pickerMonth,0).getDate();
+  const today=isoToday();
+  let html='';
+  for(let i=dow-1;i>0;i--) html+=`<div class="cal-d other">${prev-i+1}</div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=pickerYear+'-'+String(pickerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    if(ds>today){ html+=`<div class="cal-d other" style="opacity:.3">${d}</div>`;continue; }
+    const isSel=ds===currentDate;
+    let cls='cal-d';if(ds===today)cls+=' today';if(isSel)cls+=' selected';
+    html+=`<div class="${cls}" onclick="selectDay('${ds}')">${d}</div>`;
+  }
+  document.getElementById('picker-days').innerHTML=html;
+}
+function selectDay(ds){
+  currentDate=ds;
+  closeModal('modal-picker');
+  updateDateLabels();
+  if(currentView==='today') renderToday();
+  if(currentView==='food') renderFood();
+  if(currentView==='water') renderWater();
+}
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+function changeDay(delta){
+  const d=parseIso(currentDate);d.setDate(d.getDate()+delta);
+  const s=isoDate(d);if(s>isoToday()) return;
+  currentDate=s;
+  updateDateLabels();
+  if(currentView==='today') renderToday();
+  if(currentView==='food') renderFood();
+  if(currentView==='water') renderWater();
+}
+
+function updateDateLabels(){
+  const lbl=fmtLabel(currentDate);
+  const isToday=currentDate===isoToday();
+  ['dn-label','dn-label-f','dn-label-w'].forEach(id=>{ const el=document.getElementById(id);if(el)el.textContent=lbl; });
+  ['dn-next','dn-next-f','dn-next-w'].forEach(id=>{ const el=document.getElementById(id);if(el){el.classList.toggle('disabled',isToday);} });
+}
+
+function getPastDays(n){
+  const days=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date();d.setDate(d.getDate()-i);days.push(isoDate(d)); }
+  return days;
+}
+
+function calcFoodStreak(){
+  let streak=0;const d=new Date();
+  while(true){
+    const iso=isoDate(d);
+    if((foodEntries[iso]||[]).length>0) streak++;
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+function calcWaterStreak(){
+  let streak=0;const d=new Date();
+  while(true){
+    const key=hydDateKey(d);
+    const hydro=waterEntries.filter(e=>e.date===key).reduce((s,e)=>s+e.vol*e.coef,0);
+    if(hydro>=waterNorm) streak++;
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--bg4);border:0.5px solid var(--border2);border-radius:10px;padding:8px 18px;font-size:13px;color:var(--text);z-index:200;white-space:nowrap;pointer-events:none';
+  el.textContent=msg;document.body.appendChild(el);
+  setTimeout(()=>el.remove(),2000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o)o.classList.remove('open'); }));
+
+// ══════════════════════════════════════════════════════
+// HAPTIC FEEDBACK
+// ══════════════════════════════════════════════════════
+function haptic(style){
+  if(navigator.vibrate) navigator.vibrate(style==='heavy'?[10,5,10]:8);
+}
+
+// ══════════════════════════════════════════════════════
+// SWIPE TO CHANGE DAY
+// ══════════════════════════════════════════════════════
+(function(){
+  let tx=0,ty=0;
+  const area=document.getElementById('scroll-area');
+  area.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+  area.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx;
+    const dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+      // only on views with day navigation
+      if(['today','food','water'].includes(currentView)){
+        haptic();
+        changeDay(dx<0?1:-1);
+      }
+    }
+  },{passive:true});
+})();
+
+// ══════════════════════════════════════════════════════
+// REMINDER SETTINGS
+// ══════════════════════════════════════════════════════
+let reminderSettings = {
+  foodEnabled: false,
+  breakfast: '09:00', lunch: '14:00', dinner: '20:00',
+  waterEnabled: false,
+  waterFrom: '08:00', waterTo: '20:00'
+};
+let foodNotifTimers=[];
+let waterNotifTimer=null;
+
+function saveReminderSettings(){
+  reminderSettings.breakfast = document.getElementById('notif-breakfast')?.value||'09:00';
+  reminderSettings.lunch     = document.getElementById('notif-lunch')?.value||'14:00';
+  reminderSettings.dinner    = document.getElementById('notif-dinner')?.value||'20:00';
+  reminderSettings.waterFrom = document.getElementById('notif-water-from')?.value||'08:00';
+  reminderSettings.waterTo   = document.getElementById('notif-water-to')?.value||'20:00';
+  localStorage.setItem('reminder_settings', JSON.stringify(reminderSettings));
+  if(reminderSettings.foodEnabled) setupFoodReminders();
+  if(reminderSettings.waterEnabled) setupWaterHourlyReminders();
+}
+
+function loadReminderSettings(){
+  try{ const s=JSON.parse(localStorage.getItem('reminder_settings')); if(s) reminderSettings={...reminderSettings,...s}; }catch(e){}
+}
+
+function applyReminderSettingsToUI(){
+  const el=id=>document.getElementById(id);
+  if(el('notif-breakfast')) el('notif-breakfast').value=reminderSettings.breakfast;
+  if(el('notif-lunch'))     el('notif-lunch').value=reminderSettings.lunch;
+  if(el('notif-dinner'))    el('notif-dinner').value=reminderSettings.dinner;
+  if(el('notif-water-from'))el('notif-water-from').value=reminderSettings.waterFrom;
+  if(el('notif-water-to'))  el('notif-water-to').value=reminderSettings.waterTo;
+  if(el('food-notif-toggle')) el('food-notif-toggle').checked=reminderSettings.foodEnabled;
+  if(el('water-notif-toggle')) el('water-notif-toggle').checked=reminderSettings.waterEnabled;
+  updateFoodNotifStatus();
+  updateWaterNotifStatus();
+}
+
+// ── FOOD REMINDERS ───────────────────────────────────
+function toggleFoodNotif(){
+  reminderSettings.foodEnabled=document.getElementById('food-notif-toggle').checked;
+  if(reminderSettings.foodEnabled){
+    requestNotifPermission(()=>{ setupFoodReminders(); updateFoodNotifStatus(); });
+  } else {
+    foodNotifTimers.forEach(t=>clearTimeout(t)); foodNotifTimers=[];
+    updateFoodNotifStatus();
+  }
+  localStorage.setItem('reminder_settings',JSON.stringify(reminderSettings));
+}
+
+function setupFoodReminders(){
+  foodNotifTimers.forEach(t=>clearTimeout(t));
+  foodNotifTimers=[];
+  if(Notification.permission!=='granted'||!reminderSettings.foodEnabled) return;
+  const meals=[
+    {key:'breakfast',icon:'🥣',label:'Время завтрака!'},
+    {key:'lunch',icon:'🍽️',label:'Время обеда!'},
+    {key:'dinner',icon:'🥘',label:'Время ужина!'},
+  ];
+  const now=new Date();
+  meals.forEach(m=>{
+    const[h,min]=reminderSettings[m.key].split(':').map(Number);
+    const target=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,min,0);
+    const diff=target-now;
+    if(diff>0){
+      foodNotifTimers.push(setTimeout(()=>{
+        new Notification(m.icon+' '+m.label,{body:'Не забудь занести приём пищи'});
+        haptic('heavy');
+      },diff));
+    }
+  });
+}
+
+function updateFoodNotifStatus(){
+  const st=document.getElementById('food-notif-status');
+  if(!st) return;
+  const on=reminderSettings.foodEnabled;
+  const perm=Notification.permission;
+  if(!on){ st.textContent='Выключены'; return; }
+  if(perm!=='granted'){ st.textContent='⚠️ Требуется разрешение браузера'; return; }
+  st.textContent='✓ Активны: '+reminderSettings.breakfast+' · '+reminderSettings.lunch+' · '+reminderSettings.dinner;
+}
+
+// ── WATER HOURLY REMINDERS ───────────────────────────
+function toggleWaterHourlyNotif(){
+  reminderSettings.waterEnabled=document.getElementById('water-notif-toggle').checked;
+  if(reminderSettings.waterEnabled){
+    requestNotifPermission(()=>{ setupWaterHourlyReminders(); updateWaterNotifStatus(); });
+  } else {
+    if(waterNotifTimer) clearInterval(waterNotifTimer);
+    updateWaterNotifStatus();
+  }
+  localStorage.setItem('reminder_settings',JSON.stringify(reminderSettings));
+}
+
+function setupWaterHourlyReminders(){
+  if(waterNotifTimer) clearInterval(waterNotifTimer);
+  if(Notification.permission!=='granted'||!reminderSettings.waterEnabled) return;
+  const check=()=>{
+    const now=new Date();
+    const [fh]=reminderSettings.waterFrom.split(':').map(Number);
+    const [th]=reminderSettings.waterTo.split(':').map(Number);
+    const h=now.getHours();
+    if(h>=fh&&h<th){
+      const key=todayHydKey();
+      const hydro=Math.round(waterEntries.filter(e=>e.date===key).reduce((s,e)=>s+e.vol*e.coef,0));
+      if(hydro<waterNorm){
+        const left=waterNorm-hydro;
+        new Notification('💧 Время выпить воды',{body:`Осталось ${left} мл до нормы`});
+        haptic();
+      }
+    }
+  };
+  // Fire at next full hour, then every hour
+  const now=new Date();
+  const msToNextHour=((60-now.getMinutes())*60-(now.getSeconds()))*1000;
+  setTimeout(()=>{ check(); waterNotifTimer=setInterval(check,3600000); },msToNextHour);
+}
+
+function updateWaterNotifStatus(){
+  const st=document.getElementById('water-notif-status');
+  if(!st) return;
+  const on=reminderSettings.waterEnabled;
+  const perm=Notification.permission;
+  if(!on){ st.textContent='Выключены'; return; }
+  if(perm!=='granted'){ st.textContent='⚠️ Требуется разрешение браузера'; return; }
+  st.textContent='✓ Каждый час с '+reminderSettings.waterFrom+' до '+reminderSettings.waterTo;
+}
+
+function requestNotifPermission(cb){
+  if(Notification.permission==='granted'){ cb(); return; }
+  Notification.requestPermission().then(p=>{ if(p==='granted') cb(); else showToast('Разрешите уведомления в настройках браузера'); });
+}
+
+// ══════════════════════════════════════════════════════
+// TOP FOODS (weekly report)
+// ══════════════════════════════════════════════════════
+function getTopFoods(days){
+  const counts={};
+  getPastDays(days).forEach(d=>{
+    (foodEntries[d]||[]).forEach(e=>{
+      if(!counts[e.name]) counts[e.name]=0;
+      counts[e.name]++;
+    });
+  });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+}
+
+// ══════════════════════════════════════════════════════
+// WEEKLY SUMMARY (shown in stats)
+// ══════════════════════════════════════════════════════
+function renderWeeklySummary(){
+  const top=getTopFoods(7);
+  const el=document.getElementById('weekly-top-foods');
+  if(!el) return;
+  if(!top.length){ el.innerHTML='<span style="color:var(--text3);font-size:12px">Нет данных за 7 дней</span>'; return; }
+  el.innerHTML=top.map(([name,cnt],i)=>
+    `<div class="sr"><span class="sr-k">${i+1}. ${name}</span><span class="sr-v" style="color:var(--text3);font-size:12px">${cnt}× за неделю</span></div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+loadAll();
+loadReminderSettings();
+updateDateLabels();
+renderToday();
+restoreNotif();
+setupFoodReminders();
+setupWaterHourlyReminders();
+</script>
+</body>
+</html>
